@@ -25,6 +25,8 @@ Scripts available:
   `physical_time_per_hour`.
 - `plot_gw_energy`, plot the instantaneous power and cumulative energy lost via
    gravitational waves as measured at a given distance.
+- `plot_total_luminosity`, plot the total luminosity (gravitational waves +
+   electromagnetic waves).
 - `print_available_timeseries`, prints the list of timeseries that can `kuibit`
   can access.
 - `print_available_iterations`, prints the list of iterations available for a given
