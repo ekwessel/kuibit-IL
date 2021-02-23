@@ -84,8 +84,8 @@ if __name__ == "__main__":
     ax1.plot(power)
     ax2.plot(energy)
     ax2.set_xlabel("Time")
-    ax1.set_ylabel(r"$E^{<t}(t)$")
-    ax2.set_ylabel(r"$dE\slash dt (t)$")
+    ax1.set_ylabel(r"$dE\slash dt (t)$")
+    ax2.set_ylabel(r"$E^{<t}(t)$")
 
     output_path = os.path.join(args.outdir, figname)
     logger.debug(f"Saving in {output_path}")
