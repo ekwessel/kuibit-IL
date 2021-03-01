@@ -69,21 +69,21 @@ if __name__ == "__main__":
 
     radius = sim.gravitationalwaves.radii[args.detector_num]
 
-    logger.debug(f"Computing energy")
+    logger.debug("Computing energy")
     energy = sim.gravitationalwaves[radius].get_total_energy(args.pcut)
-    logger.debug(f"Computed energy")
+    logger.debug("Computed energy")
 
-    logger.debug(f"Computing power")
+    logger.debug("Computing power")
     power = sim.gravitationalwaves[radius].get_total_power(args.pcut)
-    logger.debug(f"Computed power ")
+    logger.debug("Computed power ")
 
-    logger.debug(f"Plotting")
+    logger.debug("Plotting")
 
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
 
-    ax1.plot(power)
-    ax2.plot(energy)
-    ax2.set_xlabel("Time")
+    ax1.plot(power.time_shifted(-radius))
+    ax2.plot(energy.time_shifted(-radius) - energy(radius))
+    ax2.set_xlabel(r"Time - Detector distance $(t - r)$")
     ax1.set_ylabel(r"$dE\slash dt (t)$")
     ax2.set_ylabel(r"$E^{<t}(t)$")
 

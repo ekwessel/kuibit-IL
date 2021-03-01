@@ -69,15 +69,15 @@ if __name__ == "__main__":
 
     radius = sim.gravitationalwaves.radii[args.detector_num]
 
-    logger.debug(f"Computing power")
+    logger.debug("Computing power")
     power_gw = sim.gravitationalwaves[radius].get_total_power(args.pcut)
     power_em = sim.electromagneticwaves[radius].get_total_power()
-    logger.debug(f"Computed power")
+    logger.debug("Computed power")
 
-    logger.debug(f"Plotting")
+    logger.debug("Plotting")
 
-    plt.plot(power_gw + power_em)
-    plt.xlabel("Time")
+    plt.plot((power_gw + power_em).time_shifted(-radius))
+    plt.xlabel(r"Time - Detector distance $(t - r)$")
     plt.ylabel(r"$dE\slash dt (t)$")
 
     output_path = os.path.join(args.outdir, figname)
