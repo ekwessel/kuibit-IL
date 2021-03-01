@@ -18,6 +18,8 @@ Scripts available:
   3D or a projection on a plane).
 - `plot_ah_separation`, plot the coordinate separation between the centroids of
   two given apparent horizons.
+- `plot_ah_radius`, plot the min, max, and mean radius of an apparent horizon as
+  a function of time.
 - `plot_constraints`, plot the absolute value of the violation of the
   constraints over time.
 - `plot_psi4`, plot Psi4 as measured at a given distance.
