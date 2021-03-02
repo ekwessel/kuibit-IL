@@ -30,6 +30,7 @@ import numpy as np
 
 from kuibit.cactus_horizons import OneHorizon
 
+
 def disable_interactive_window():
     """Disable mayavi interactive window.
 
@@ -39,6 +40,7 @@ def disable_interactive_window():
 
     """
     mlab.options.offscreen = True
+
 
 def save(outputpath, figure_extension):
     """Save figure to outputpath with figure_extension.

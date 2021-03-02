@@ -184,7 +184,9 @@ class TestVisualizeMatplotlib(unittest.TestCase):
 
     def test_plot_grid(self):
 
-        ugd = gdu.sample_function(lambda x, y: x + y, [100, 20], [0, 1], [2, 5])
+        ugd = gdu.sample_function(
+            lambda x, y: x + y, [100, 20], [0, 1], [2, 5]
+        )
 
         # Unknown plot type
         with self.assertRaises(ValueError):
@@ -225,7 +227,9 @@ class TestVisualizeMatplotlib(unittest.TestCase):
 
     def test_plot_colorbar(self):
 
-        ugd = gdu.sample_function(lambda x, y: x + y, [100, 20], [0, 1], [2, 5])
+        ugd = gdu.sample_function(
+            lambda x, y: x + y, [100, 20], [0, 1], [2, 5]
+        )
 
         cf = viz.plot_contourf(ugd, xlabel="x", ylabel="y", colorbar=False)
 
