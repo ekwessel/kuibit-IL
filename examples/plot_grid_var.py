@@ -30,13 +30,13 @@ from kuibit.visualize_matplotlib import (
 )
 
 
-"""This script plots a grid function with options specified via command-line.
-"""
+"""This script plots a grid function or a grid array with options specified via
+command-line. """
 
 if __name__ == "__main__":
     setup_matplotlib()
 
-    desc = """Plot a given grid function.
+    desc = """Plot a given grid function or a grid array.
 
     By default, no interpolation is performed so the image may look pixelated.
     There are two available modes of interpolation. The first is activated
@@ -46,7 +46,10 @@ if __name__ == "__main__":
     A second way to perform interpolation is passing a --interpolation-method
     argument (e.g., bicubic). With this, the plotting data is interpolated.
     This is much faster but is not as accurate.
-    """
+
+    When plotting grid arrays, enable the option --grid-array. This will remove
+    the labels and the ticks on the axis, which are meaningless for a grid
+    array. """
 
     parser = pah.init_argparse(desc)
     pah.add_grid_to_parser(parser)
@@ -105,6 +108,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Whether to take the absolute value.",
     )
+    parser.add_argument(
+        "--grid-array",
+        action="store_true",
+        help="Remove labels and ticks from the axes."
+        " (When working with grid arrays,"
+        " Carpet outputs meaningless coordinates.)",
+    )
     args = pah.get_args(parser)
 
     # Parse arguments
@@ -155,13 +165,27 @@ if __name__ == "__main__":
 
     logger.debug(f"Using label {label}")
 
+    if args.grid_array:
+        # Remove labels and ticks
+        logger.debug("Removing labels and ticks")
+        plt.tick_params(
+            axis="both",
+            which="both",
+            bottom=False,
+            top=False,
+            left=False,
+            right=False,
+            labelbottom=False,
+            labelleft=False,
+        )
+
     plot_color(
         data,
         x0=x0,
         x1=x1,
         shape=shape,
-        xlabel=args.plane[0],
-        ylabel=args.plane[1],
+        xlabel=args.plane[0] if not args.grid_array else None,
+        ylabel=args.plane[1] if not args.grid_array else None,
         resample=args.multilinear_interpolate,
         colorbar=args.colorbar,
         logscale=args.logscale,
