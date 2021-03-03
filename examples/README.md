@@ -32,6 +32,9 @@ Scripts available:
    electromagnetic waves as measured at a given distance.
 - `plot_total_luminosity`, plot the total luminosity (gravitational waves +
    electromagnetic waves).
+- `plot_MRI_quality_factor`, plot the ratio between the wavelength of the
+  magneto-rotational instability and the local resolution of the grid. It requires
+  a thorn that computes `MRI_lambda`.
 - `print_available_timeseries`, prints the list of timeseries that can `kuibit`
   can access.
 - `print_available_iterations`, prints the list of iterations available for a given
