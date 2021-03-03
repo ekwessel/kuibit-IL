@@ -16,6 +16,7 @@ Scripts available:
 - `plot_1d_vars`, plot one or more along a 1D axis.
 - `plot_ah_trajectories`, plot the trajectories of given apparent horizons (in
   3D or a projection on a plane).
+- `plot_ah_found`, plot a timeline of when the given horizons are found.
 - `plot_ah_separation`, plot the coordinate separation between the centroids of
   two given apparent horizons.
 - `plot_ah_radius`, plot the min, max, and mean radius of an apparent horizon as
