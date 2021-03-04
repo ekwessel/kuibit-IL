@@ -141,7 +141,7 @@ if __name__ == "__main__":
             data = var[iteration]
             variable_name = variable
 
-        logger.debug(f"Merging refinement levels")
+        logger.debug("Merging refinement levels")
         data = data.merge_refinement_levels()
 
         if args.logscale:

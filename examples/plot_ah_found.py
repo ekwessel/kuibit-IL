@@ -82,12 +82,12 @@ if __name__ == "__main__":
             # We prepare an array with the same length of time_found and with
             # constant value of ah
             ah_num = [ah] * len(time_found)
-            plt.scatter(time_found, ah_num, marker='o', s=0.1)
+            plt.scatter(time_found, ah_num, marker="o", s=0.1)
 
     # Plot
     plt.ylabel("Apparent horizon")
     plt.xlabel("Time")
-    plt.gca().tick_params(axis='y', which='minor', left=False)
+    plt.gca().tick_params(axis="y", which="minor", left=False)
     plt.ylim(min(args.horizons) - 1, max(args.horizons) + 1)
     plt.yticks(args.horizons)
 
