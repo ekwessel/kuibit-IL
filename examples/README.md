@@ -39,3 +39,5 @@ Scripts available:
   can access.
 - `print_available_iterations`, prints the list of iterations available for a given
   variable.
+- `print_time_formation_ah`, prints the time of formation of a given apparent
+  horizon.
