@@ -12,7 +12,7 @@ license](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://perso.cran
 [![PyPI version](https://badge.fury.io/py/kuibit.svg)](https://badge.fury.io/py/kuibit)
 [![DeepSource](https://deepsource.io/gh/Sbozzolo/kuibit.svg/?label=active+issues)](https://deepsource.io/gh/Sbozzolo/kuibit/?ref=repository-badge)
 
-# kuibit
+# kuibit-IL: The Illinois GRMHD Compatible Version
 
 `kuibit` is a Python library to analyze simulations performed with the Einstein
 Toolkit largely inspired by
@@ -31,6 +31,9 @@ page is mainly intended for developers. Documentation for users is available
 - [What people say about kuibit](https://sbozzolo.github.io/kuibit/testimonials.html)
 - [Users/developers group chat](https://t.me/kuibit)
 
+
+This version contains a few tweaks to be compatible with the diagnostics of the privately
+maintained (non-Einstein Toolkit) Illinois GRMHD code.
 
 ## Installation
 
