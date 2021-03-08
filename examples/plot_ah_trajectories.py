@@ -19,6 +19,7 @@ import logging
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from kuibit.simdir import SimDir
 from kuibit import argparse_helper as pah
@@ -56,6 +57,9 @@ if __name__ == "__main__":
         nargs="+",
     )
 
+    parser.add_argument(
+        "--draw-horizons", help="Draw the apparent horizons, if available", action="store_true"
+    )
     args = pah.get_args(parser)
 
     # Parse arguments
@@ -92,13 +96,15 @@ if __name__ == "__main__":
     y_coord = {}
     z_coord = {}
 
+    horizons = {}
+
     for ah in args.horizons:
         logger.debug(f"Reading horizon {ah}")
         # We can use any index for the qlm index, it will be thrown away
-        current_horizon = sim_hor[0, ah]
-        x_coord[ah] = current_horizon.ah.centroid_x
-        y_coord[ah] = current_horizon.ah.centroid_y
-        z_coord[ah] = current_horizon.ah.centroid_z
+        horizons[ah] = sim_hor[0, ah]
+        x_coord[ah] = horizons[ah].ah.centroid_x
+        y_coord[ah] = horizons[ah].ah.centroid_y
+        z_coord[ah] = horizons[ah].ah.centroid_z
 
     # Plot
     fig = plt.figure()
@@ -108,6 +114,13 @@ if __name__ == "__main__":
         from mpl_toolkits.mplot3d import Axes3D
 
         ax = fig.gca(projection="3d")
+
+        # We keep track of all the data just to set the axes ratio to equal
+        # https://stackoverflow.com/a/21765085
+        X = np.array([])
+        Y = np.array([])
+        Z = np.array([])
+
         for ah in args.horizons:
             ax.plot(
                 x_coord[ah].y,
@@ -115,9 +128,52 @@ if __name__ == "__main__":
                 z_coord[ah].y,
                 label=f"Horizon {ah}",
             )
+
+            X = np.append(X, x_coord[ah].y)
+            Y = np.append(Y, y_coord[ah].y)
+            Z = np.append(Z, z_coord[ah].y)
+
+            time = x_coord[ah].tmax
+
+            # Try to draw the shape of the horizon
+            if args.draw_horizons and time in horizons[ah].shape_times:
+                logger.debug(f"Drawing shape at time {time} for ah {ah}")
+                shape_xyz = [
+                    np.concatenate(
+                        [
+                            patch
+                            for patch in horizons[ah].shape_at_time(time)[dim]
+                        ]
+                    )
+                    for dim in range(3)
+                ]
+                # This is not the correct way to do this, but it is acceptable for the moment
+                ax.plot_surface(*shape_xyz)
+
+                X = np.append(X, shape_xyz[0])
+                Y = np.append(Y, shape_xyz[1])
+                Z = np.append(Z, shape_xyz[2])
+            else:
+                logger.debug(f"Shape not available at {time} for ah {ah}")
+
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
+
+        max_range = (
+            np.array(
+                [X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]
+            ).max()
+            / 2.0
+        )
+
+        mid_x = (X.max() + X.min()) * 0.5
+        mid_y = (Y.max() + Y.min()) * 0.5
+        mid_z = (Z.max() + Z.min()) * 0.5
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
     else:
         logger.debug("Plotting 2D")
         coords = {"x": x_coord, "y": y_coord, "z": z_coord}
@@ -133,14 +189,33 @@ if __name__ == "__main__":
                 coords[to_plot_y][ah].y,
                 label=f"Horizon {ah}",
             )
+
+            time = x_coord[ah].tmax
+
+            # Try to draw the shape of the horizon
+            if args.draw_horizons and time in horizons[ah].shape_times:
+
+                cut = {
+                    "xy": (None, None, 0),
+                    "xz": (None, 0, None),
+                    "yz": (0, None, None),
+                }
+
+                logger.debug(f"Drawing shape at time {time} for ah {ah}")
+                shape = horizons[ah].shape_outline_at_time(
+                    time, cut[args.type]
+                )
+                ax.fill(shape[0], shape[1])
+            else:
+                logger.debug(f"Shape not available at {time} for ah {ah}")
+
         ax.set_xlabel(to_plot_x)
         ax.set_ylabel(to_plot_y)
 
         ax.set_aspect("equal")
+
     ax.legend()
-
     time = x_coord[ah].tmax
-
     add_text_to_figure_corner(fr"$t = {time:.3f}$")
 
     output_path = os.path.join(args.outdir, figname)
