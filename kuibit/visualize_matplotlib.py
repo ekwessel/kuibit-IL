@@ -25,6 +25,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.mplot3d import Axes3D
 
 from kuibit import grid_data as gd
 from kuibit.cactus_grid_functions import BaseOneGridFunction
@@ -366,7 +367,9 @@ def plot_colorbar(mpl_artist, figure=None, axis=None, label=None, **kwargs):
 def add_text_to_figure_corner(text, figure=None, axis=None):
     """Add text to the bottom right corner of a figure."""
 
-    return axis.text(
+    text_function = axis.text2D if isinstance(axis, Axes3D) else axis.text
+
+    return text_function(
         0.98,
         0.02,
         text,
