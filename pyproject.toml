@@ -25,6 +25,7 @@ numba = { version = "^0.51.2", optional = true }
 lalsuite = { version = "^6.77", optional = true }
 pycbc = { version = "^1.16.10", optional = true }
 tikzplotlib =  { version = "^0.9.5", optional = true }
+ciak = { git = "https://github.com/Sbozzolo/ciak.git", branch = "main", optional = true }
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
@@ -38,10 +39,12 @@ readline = "^6.2.4"
 jedi = "^0.17.2"
 
 [tool.poetry.extras]
-full = ["numba", "lalsuite", "pycbc", "tikzplotlib", "motionpicture"]
+full = ["numba", "lalsuite", "pycbc", "tikzplotlib", "motionpicture", "ciak"]
 with_pycbc = ["lalsuite", "pycbc"]
 with_numba = ["numba"]
 with_tikz = ["tikzplotlib"]
+with_ciak = ["ciak"]
+with_motionpicture = ["motionpicture"]
 
 [tool.black]
 line-length = 79

@@ -1,0 +1,72 @@
+#+TITLE: Analysis for simulations of binary black holes surrounded by an accretion disk
+#+DATE: 8 March 2021
+
+* mkdir -p {{reportdir::.}}
+* plot_scalar.py
+We are going to always set this here. This means: set the flag --datadir to the
+command-line argument datadir if it is provided, otherwise set it to '.'. Same
+for reportdir.
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+*** --reduction maximum
+These are the maximum on the grid
+**** --variable
+***** rho_b
+***** smallb2
+*** --variable
+Here we are going to have truly scalar variables: fluxes through the horizons,
+quasi-local measures, fluxes through spheres far away. The location of the sphere
+can be set with the command-line argument outflow-detnum
+**** flux_M0[0]
+**** flux_E_fluid[0]
+**** flux_E_EM[0]
+**** flux_J_fluid[0]
+**** flux_J_EM[0]
+**** flux_M0[1]
+**** flux_E_fluid[1]
+**** flux_E_EM[1]
+**** flux_J_fluid[1]
+**** flux_J_EM[1]
+
+**** qlm_mass[0]
+**** qlm_spin[0]
+**** qlm_mass[1]
+**** qlm_spin[1]
+
+**** outflow_flux[{{outflow_dentum::5}}]
+**** outflow_poyn_flux[{{outflow_dentum::5}}]
+* plot_grid_var.py
+Here, we need again datadir and outdir.
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+We keep the resolution low for speed. The default is 400. We also keep the grid
+only around the disk.
+*** --resolution {{grid_res::400}} --colorbar
+**** -x0 -100 -100 -x1 100 100
+***** --logscale --variable
+****** rho_b
+****** rho_b --plane xz
+****** P
+****** P --plane xz
+****** B_poloidal --absolute
+****** B_toroidal --absolute
+***** --variable
+****** MRI_lambda
+****** angular_velocity
+****** torque_dens
+*** -x0 0 0 -x1 99 99 --grid-array
+These are grid arrays. For grid arrays, the coordinates are meaningless, and what
+matters is only the number of points that we have. For these simulations, it will
+likely be 100 x 100.
+***** --logscale --variable
+In our simulations, the grid arrays are those variables integrated along the z
+axis.
+****** int_em_T_rph --absolute
+****** int_hydro_T_rph --absolute
+****** int_surface_density --absolute
+****** int_torque_dens --absolute
+* plot_physical_time_per_hour.py
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+* plot_ah_separation.py -a 1 2
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+* plot_ah_trajectories.py -a 1 2
+-t xy means "on the xy plane"
+** --datadir {{datadir::.}} --outdir {{reportdir::.}} -t xy

@@ -2,13 +2,18 @@
 
 In this directory, we collect working programs built with `kuibit`. You can use
 these scripts as good examples of ``kuibit`` usage (or you can directly use
-them).
+them). There are scripts, `mopi_movies`, and `ciakfiles`, which are
+configuration files for [motionpicture](github.com/sbozzolo/motionpicture) (to
+make animations) and for [ciak](github.com/sbozzolo/ciak) (to run full
+analyses). You are encourages to define the `MOPI_MOVIES_DIR` and the
+`CIAKFILES_DIR` to take full advantage of these programs.
 
 > :warning: While `kuibit` is tested at each commit to ensure that nothing
->           breaks, these scripts are not. If you find a script that does not
->           work, please report it and we will fix that.
+>           breaks, these codes are not. If you find one that does not work,
+>           please report it and we will fix that.
 
-Scripts available:
+## Scripts available
+
 - `plot_grid_var`, plot any 2D grid function on a grid specified via
   command-line.
 - `plot_scalar`, plot any reduction of any variable as a time series.
@@ -41,3 +46,13 @@ Scripts available:
   variable.
 - `print_time_formation_ah`, prints the time of formation of a given apparent
   horizon.
+
+## Mopi_movies avaialble
+
+- `1d_vars`, plots a 1D variable as a function of time.
+- `grid_var`, plots a 2D variable as a function of time.
+
+## Ciakfiles avaialble
+
+- `bbh_disk`, for a simulation of accretion onto binary black holes.
+- `bbh`, for a simulation of binary black holes.

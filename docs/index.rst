@@ -47,8 +47,10 @@ For a full list of available features, see the :doc:`features page <features>`.
   (:py:mod:`~.visualize_matplotlib`).
 - [EXPERIMENTAL] Write command-line scripts (:py:mod:`~.argparse_helper`).
 - [EXPERIMENTAL] Make movies with  `motionpicture`_.
+- [EXPERIMENTAL] Run full analyses with  `ciak`_.
 
 .. _motionpicture: https://github.com/Sbozzolo/motionpicture
+.. _ciak: https://github.com/Sbozzolo/ciak
 
 Installation
 ------------

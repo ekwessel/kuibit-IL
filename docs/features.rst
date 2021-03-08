@@ -161,4 +161,8 @@ Experimental features may change in the future.
 
 .. _motionpicture: https://github.com/Sbozzolo/motionpicture
 
+- Run full analyses with `ciak`_.
+
+.. _ciak: https://github.com/Sbozzolo/ciak
+
 - Produce log messages.
