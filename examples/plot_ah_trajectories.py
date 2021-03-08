@@ -136,7 +136,7 @@ if __name__ == "__main__":
         ax.set_xlabel(to_plot_x)
         ax.set_ylabel(to_plot_y)
 
-    ax.set_aspect("equal")
+        ax.set_aspect("equal")
     ax.legend()
 
     time = x_coord[ah].tmax
