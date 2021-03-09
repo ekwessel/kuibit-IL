@@ -489,7 +489,7 @@ class TwoScalar:
             usecols=(self._time_column, column_number),
         )
 
-        return ts.remove_duplicate_iters(t, y)
+        return ts.remove_duplicated_iters(t, y)
 
     def __getitem__(self, key):
         return self.load(key)
