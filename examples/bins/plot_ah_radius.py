@@ -22,13 +22,14 @@ import matplotlib.pyplot as plt
 
 from kuibit.simdir import SimDir
 from kuibit import argparse_helper as pah
-from kuibit.series import sample_common
 from kuibit.visualize_matplotlib import (
     setup_matplotlib,
     save,
 )
 
-"""Plot the coordinate radius of an apparent horizon as a function of time. """
+"""Plot the coordinate radius of an apparent horizon as a function of time. If --dx
+is passed, then add a y-axis indicating the number of points that resolve the radius,
+assuming that it is all covered by the given resolution."""
 
 if __name__ == "__main__":
     setup_matplotlib()
@@ -44,6 +45,13 @@ if __name__ == "__main__":
         type=int,
         required=True,
         help="Apparent horizons to plot",
+    )
+
+    parser.add_argument(
+        "--dx",
+        type=float,
+        help=("Grid resolution where the horizon is,"
+              " assuming the entire horizon has this resolution"),
     )
 
     args = pah.get_args(parser)
@@ -75,16 +83,24 @@ if __name__ == "__main__":
     if ah not in sim_hor.available_apparent_horizons:
         raise ValueError(f"Apparent horizons {ah} is not available")
 
-    logger.debug("Reading horizons and computing separation")
+    logger.debug("Reading horizons and computing radius")
     # We can use any index for the qlm index, it will be thrown away
     horizon = sim_hor[0, ah].ah
 
     # Plot
     plt.ylabel(f"Radius of horizon {ah}")
     plt.xlabel("Time")
-    plt.plot(horizon.mean_radius, label="Mean radius")
-    plt.plot(horizon.min_radius, label="Min radius")
-    plt.plot(horizon.max_radius, label="Max radius")
+    plt.plot(horizon.mean_radius / args.dx)
+    plt.plot(horizon.min_radius / args.dx)
+    plt.plot(horizon.max_radius / args.dx)
+
+    if args.dx:
+        logger.debug("Adding resolution y axis")
+        plt.twinx()
+        plt.plot(horizon.mean_radius, label="Mean radius")
+        plt.plot(horizon.min_radius, label="Min radius")
+        plt.plot(horizon.max_radius, label="Max radius")
+        plt.ylabel("Number of points on radius")
 
     plt.legend()
     output_path = os.path.join(args.outdir, figname)
