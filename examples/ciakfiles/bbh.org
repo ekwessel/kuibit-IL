@@ -1,0 +1,24 @@
+#+TITLE: Analysis for simulations of binary black holes
+#+DATE: 8 March 2021
+
+* mkdir -p {{reportdir::.}}
+We are going to always set this here. This means: set the flag --datadir to the
+command-line argument datadir if it is provided, otherwise set it to '.'. Same
+for reportdir.
+# --datadir {{datadir::.}} --outdir {{reportdir::.}}
+* plot_constraints.py
+How are constraints evolving?
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+* plot_physical_time_per_hour.py
+How fast is the simulation running?
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+* plot_ah_separation.py -a 1 2
+Coordinate separation as a function of time
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+* plot_ah_trajectories.py -a 1 2
+Black hole trajectories
+
+** --datadir {{datadir::.}} --outdir {{reportdir::.}}
+-t xy means "on the xy plane", 3D is instead in full 3D
+*** -t xy
+*** -t 3D
