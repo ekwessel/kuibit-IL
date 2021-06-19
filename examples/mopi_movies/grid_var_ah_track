@@ -15,33 +15,40 @@
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, see <https://www.gnu.org/licenses/>.
 
-"""Make a video with 2D grid data.
+"""Visualize 2D grid data, centered on the first apparent horizon, and optionally drawing the horizons.
 """
 
+from matplotlib.pyplot import clf as clear_figure
+from kuibit import argparse_helper as kah
 from kuibit.simdir import SimDir
-from kuibit import argparse_helper as pah
 from kuibit.visualize_matplotlib import (
-    setup_matplotlib,
+    add_text_to_corner,
     plot_color,
-    add_text_to_figure_corner,
+    plot_horizon_on_plane_at_iteration,
     save,
+    setup_matplotlib,
 )
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
+
 
 def mopi_add_custom_options(parser):
-    parser.add_argument("--datadir", default=".", help="Data directory")
-    pah.add_grid_to_parser(parser)
-    pah.add_figure_to_parser(parser)
-    pah.add_horizon_to_parser(parser)
+    # These are the custom options that mopi will see.
+
+    parser.add_argument("--datadir", default=".", help="Data directory.")
+    kah.add_horizon_to_parser(parser)
     parser.add_argument(
-        "--variable", type=str, required=True, help="Variable to plot"
+        "--ignore-symlinks",
+        action="store_true",
+        help="Ignore symlinks in the data directory",
+    )
+    kah.add_grid_to_parser(parser, dimensions=2)
+    kah.add_figure_to_parser(parser)
+    parser.add_argument(
+        "--variable", type=str, required=True, help="Variable to plot."
     )
     parser.add_argument(
         "--multilinear-interpolate",
         action="store_true",
-        help="Whether to interpolate to smooth data with multinear"
+        help="Whether to interpolate to smooth data with multilinear"
         " interpolation before plotting.",
     )
     parser.add_argument(
@@ -65,7 +72,7 @@ def mopi_add_custom_options(parser):
         "--vmin",
         help=(
             "Minimum value of the variable. "
-            "If logscale is True, this has to be the log."
+            "If logscale is True, this has to be the log. "
         ),
         type=float,
     )
@@ -83,46 +90,65 @@ def mopi_add_custom_options(parser):
         help="Whether to take the absolute value.",
     )
 
+
 class MOPIMovie:
-
     def __init__(self, args):
+        # Here we initialize all the objects that we need for all the frames.
+        # All the expensive stuff has to be done here.
 
-        self.sim = SimDir(args.datadir)
+        # TODO: Automatically compute min and max if they are not specified.
+
+        self.sim = SimDir(args.datadir, ignore_symlinks=args.ignore_symlinks)
         self.x0, self.x1, self.res = args.origin, args.corner, args.resolution
         self.shape = [self.res, self.res]
         self.reader = self.sim.gridfunctions[args.plane]
         self.var = self.reader[args.variable]
 
         self.iterations = self.var.available_iterations
-        
+
         # get centroid timeseries
         self.horizon = self.sim.horizons[0, 1]
         self.centroid_x = self.horizon.ah.centroid_x
         self.centroid_y = self.horizon.ah.centroid_y
 
+        # Apparent horizons
+        self.ahs = {}
+
+        if args.ah_show:
+            for ah in self.sim.horizons.available_apparent_horizons:
+                self.ahs[ah] = self.sim.horizons.get_apparent_horizon(ah)
+
         self.args = args
 
     def get_frames(self):
+        # Here we define what is a "frame" (it is one iteration). This function
+        # has to return an iterable on what we want to make frames of.
         return self.iterations
 
     def make_frame(self, path, iteration):
+        # Here we plot a frame. This function has to take the output path and
+        # the identifier of what is a frame (in this case, an iteration).
+
         setup_matplotlib()
+        clear_figure()
+
+        # TODO: check that I actually want the following settings:
         #Gonna override some things:
-        matplotlib.rcParams.update(
-        {
-            "lines.markersize": 4,
-            "axes.labelsize": 16,
-            "font.weight": "light",
-            "font.size": 16,
-            "legend.fontsize": 16,
-            "xtick.labelsize": 13,
-            "ytick.labelsize": 13,
-            "axes.formatter.limits": [-3, 3],
-            "xtick.minor.visible": True,
-            "ytick.minor.visible": True,
-            "image.cmap": "PuRd",
-        }
-        )
+        #matplotlib.rcParams.update(
+        #{
+        #    "lines.markersize": 4,
+        #    "axes.labelsize": 16,
+        #    "font.weight": "light",
+        #    "font.size": 16,
+        #    "legend.fontsize": 16,
+        #    "xtick.labelsize": 13,
+        #    "ytick.labelsize": 13,
+        #    "axes.formatter.limits": [-3, 3],
+        #    "xtick.minor.visible": True,
+        #    "ytick.minor.visible": True,
+        #    "image.cmap": "PuRd",
+        #}
+        #)
 
         if self.args.absolute:
             data = abs(self.var[iteration])
@@ -130,6 +156,7 @@ class MOPIMovie:
         else:
             data = self.var[iteration]
             variable = self.args.variable
+
         if self.args.logscale:
             label = f"log10({variable})"
         else:
@@ -156,13 +183,32 @@ class MOPIMovie:
             label=label,
             interpolation=self.args.interpolation_method,
         )
-        
-        # Get horizon shape
+        # TODO: some plot transforms magic to stop video from jittering and
+        # stop the axes from shifting (see old archived code) 
+
+        # TODO: Replace this with something using shape_outline_at_time so that
+        # it can interpolate to the closest time rather than strictly using
+        # the current iteration
         if self.args.ah_show:
-            shape = self.horizon.shape_outline_at_time(time, (None, None, 0))
-            plt.gca().fill(shape[0], shape[1], self.args.ah_color)
+            for hor in self.ahs.values():
+                # Check if we have the shape at the current iteration
+                if iteration in hor.shape_iterations:
+                    plot_horizon_on_plane_at_iteration(
+                        hor,
+                        iteration,
+                        self.args.plane,
+                        color=self.args.ah_color,
+                        edgecolor=self.args.ah_edge_color,
+                        alpha=self.args.ah_alpha,
+                    )
 
-        output_path = "".join(path.split(".")[:-1])
-        extension = path.split(".")[-1]
+        # Below is what was done previously. I remember it kinda worked:
+        ## Get horizon shape
+        #if self.args.ah_show:
+        #    shape = self.horizon.shape_outline_at_time(time, (None, None, 0))
+        #    plt.gca().fill(shape[0], shape[1], self.args.ah_color)
 
-        save(output_path, extension, as_tikz=False, dpi=300)
+        time = self.var.time_at_iteration(iteration)
+        add_text_to_corner(fr"$t = {time:.3f}$")
+
+        save(path)
