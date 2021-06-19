@@ -111,6 +111,8 @@ class MOPIMovie:
         self.horizon = self.sim.horizons[0, 1]
         self.centroid_x = self.horizon.ah.centroid_x
         self.centroid_y = self.horizon.ah.centroid_y
+        self.centroid_z = self.horizon.ah.centroid_z
+
 
         # Apparent horizons
         self.ahs = {}
@@ -166,13 +168,24 @@ class MOPIMovie:
         time = self.var.time_at_iteration(iteration)
         # Interpolate the x & y bh centroid time series to that time
         # To recover the bh x & y position at this time
-        bh_x = self.centroid_x(time)
-        bh_y = self.centroid_y(time)
+        if (self.args.plane == "xy"):
+            bh_coord_1 = self.centroid_x(time)
+            bh_coord_2 = self.centroid_y(time)
+        elif (self.args.plane == "xz"):
+            bh_coord_1 = self.centroid_x(time)
+            bh_coord_2 = self.centroid_z(time)
+        elif (self.args.plane == "yz"):
+            bh_coord_1 = self.centroid_y(time)
+            bh_coord_2 = self.centroid_z(time)
+        else:
+            print("Uh-oh, this type of grid isn't supported by ah tracking.")
+            bh_coord_1 = 0.
+            bh_coord_2 = 0.
         # Shift x0 and x1 by the appropriate amount given the bh centroids
         plot_color(
             data,
-            x0=np.array([self.x0[0]+bh_x, self.x0[1]+bh_y]),
-            x1=np.array([self.x1[0]+bh_x, self.x1[1]+bh_y]),
+            x0=np.array([self.x0[0]+bh_coord_1, self.x0[1]+bh_coord_2]),
+            x1=np.array([self.x1[0]+bh_coord_1, self.x1[1]+bh_coord_2]),
             shape=self.shape,
             xlabel=self.args.plane[0],
             ylabel=self.args.plane[1],
