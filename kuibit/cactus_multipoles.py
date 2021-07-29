@@ -453,10 +453,14 @@ class MultipolesDir:
         # For h5 files is easy: it is just the var name
         rx_h5 = re.compile(r"^mp_([a-zA-Z0-9\[\]_]+).h5$")
 
+        # For IL code Psi4 files, it is even easier: it's just these files,
+        rx_IL = re.compile('^Psi4_rad\.mon\.([0-9]+)$')
+
         for f in sd.allfiles:
             filename = os.path.split(f)[1]
             matched_h5 = rx_h5.match(filename)
             matched_ascii = rx_ascii.match(filename)
+            matched_IL = rx_IL(filename)
             if matched_h5 is not None:
                 variable_name = matched_h5.group(1).lower()
                 var_list = self._vars_h5.setdefault(variable_name, set())
@@ -469,7 +473,25 @@ class MultipolesDir:
                 radius = float(matched_ascii.group(4))
                 var_list = self._vars_ascii.setdefault(variable_name, set())
                 var_list.add((mult_l, mult_m, radius, f))
-
+            elif matched_IL is not None:
+                variable_name = "psi4" # all keys must be lower-case
+                var_list = self._vars_IL.setdefault(variable_name, set())
+                data = numpy.genfromtxt(f) # Unfortunately there's no way to check this without opening the file
+                radius = data[:, -4] # save all radii timesteps (will be useful later)
+                if (data.shape[1] - 5)%2 != 0:
+                    raise RuntimeError('Wrong format')
+                nmodes = (data.shape[1] - 5)//2
+                # Loop through all the modes in the file    
+                l = 2
+                i = 1
+                while (i <= nmodes):
+                    m = l
+                    while (m >= -l and i <= nmodes):
+                        var_list.append((l,m,radius,f))
+                        m = m - 1
+                        i = i + 1
+                    l = l+1
+                
         # What pythonize_name_dict does is to make the various variables
         # accessible as attributes, e.g. self.fields.rho
         self.fields = pythonize_name_dict(list(self.keys()), self.__getitem__)
@@ -496,6 +518,20 @@ class MultipolesDir:
             raise RuntimeError(f"Wrong format in {path}")
         complex_mp = a[1] + 1j * a[2]
         return timeseries.remove_duplicated_iters(a[0], complex_mp)
+
+    @staticmethod
+    def _multipole_from_IL_Psi4_file(path, l, m):
+        """Read multipole data from an IL code Psi4 file.
+
+        :param path: File to read.
+        :type path: str
+
+        :returns: Multipole data.
+        :rtype: :py:class:`~.TimeSeries`
+        """
+        
+        return timeseries.remove_duplicated_iters(a[0], complex_mp)
+
 
     @staticmethod
     def _multipoles_from_h5file(path):
@@ -548,6 +584,28 @@ class MultipolesDir:
         ]
         return MultipoleAllDets(alldets)
 
+    def _multipoles_from_IL_Psi4_files(self, mpfiles):
+        """Read all the multipole data in several IL code Psi4 files.
+
+        :param mpfiles: Files to read.
+        :type mpfiles: list of str
+
+        :returns: :py:class:`~.MultipoleAllDets` with all the data read.
+        :rtype: :py:class:`~.MultipoleAllDets`
+        """
+        # We prepare the data for MultipoleAllDets checking for errors
+        alldets = [
+            (
+                mult_l,
+                mult_m,
+                radius,
+                self._multipole_from_IL_Psi4_file(filename, mult_l, mult_m),
+            )
+            for mult_l, mult_m, radius, filename in mpfiles
+        ]
+        return MultipoleAllDets(alldets)
+
+
     def _multipoles_from_h5files(self, mpfiles):
         """Read all the multipole data in several HDF5 files.
 
@@ -579,6 +637,9 @@ class MultipolesDir:
 
         if k in self._vars_ascii:
             return self._multipoles_from_textfiles(self._vars_ascii[k])
+
+        if k in self._vars_IL:
+            return self._multipoles_from_IL_Psi4_files(self._vars_IL[k])
 
         raise KeyError
 
