@@ -101,6 +101,7 @@ class MultipoleOneDet:
 
         self.dist = float(dist)
         self.radius = self.dist  # This is just an alias
+        self.radius_series = None
 
         self.l_min = l_min
 
@@ -252,6 +253,10 @@ class MultipoleOneDet:
 
         return result
 
+        def set_radius_series(self, array):
+            self._radius_series = array
+        return
+
 
 class MultipoleAllDets:
     """This class collects available surfaces with multipole data.
@@ -292,6 +297,7 @@ class MultipoleAllDets:
 
         detectors = {}
         self.available_lm = set()
+        radii_series = {}
 
         # Populate detectors
         # detectors is a dictionary with keys the radii and
@@ -301,7 +307,12 @@ class MultipoleAllDets:
         for mult_l, mult_m, radius, ts in data:
             if mult_l >= self.l_min:
                 # If we don't have the radius yet, let's create an empty list
-                d = detectors.setdefault(radius, [])
+                if np.isscalar(radius):
+                    rad_key = radius
+                else:
+                    rad_key = radius[0]
+                    radii_series[rad_key] = radius
+                d = detectors.setdefault(rad_key, [])
                 # Add the new values
                 d.append((mult_l, mult_m, ts))
                 # Tally the available l and m
@@ -311,6 +322,9 @@ class MultipoleAllDets:
             radius: MultipoleOneDet(radius, multipoles, self.l_min)
             for radius, multipoles in detectors.items()
         }
+
+        for radius, array in radii_series.items():
+            self._detectors[radius].set_radius_series(array) 
 
         # In Python3 .keys() is not a list
         self.radii = sorted(list(self._detectors.keys()))
@@ -529,8 +543,19 @@ class MultipolesDir:
         :returns: Multipole data.
         :rtype: :py:class:`~.TimeSeries`
         """
-        
-        return timeseries.remove_duplicated_iters(a[0], complex_mp)
+        # Calculate column #'s of real & imag components of mode from l & m:
+        ncol = 0 # Start by using this to count # of modes before the desired one,...
+        ncol = ncol + (l - m) # increment for each preceeding m-orbital,...
+        while l > 2:
+            l = l - 1
+            ncol = ncol + 2*l + 1 # and for each complete shell before the selected one.
+        # Double this (multipoles are complex) and add 1 (time is col 0): 
+        ncol = 2*ncol + 1
+        data = np.genfromtxt(path)
+
+        # Make single complex array & return as timeseries
+        complex_mp = data[:, ncol] + 1.j*data[:, ncol+1]
+        return timeseries.remove_duplicated_iters(data[:, 0], complex_mp)
 
 
     @staticmethod
