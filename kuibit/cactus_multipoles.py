@@ -253,9 +253,8 @@ class MultipoleOneDet:
 
         return result
 
-        def set_radius_series(self, array):
+    def set_radius_series(self, array):
             self._radius_series = array
-        return
 
 
 class MultipoleAllDets:
@@ -436,6 +435,7 @@ class MultipolesDir:
         # to find the l and m)
         self._vars_ascii = {}
         self._vars_h5 = {}
+        self._vars_IL = {}
 
         # First, we need to find the multipole files.
         # There are text files and h5 files
@@ -474,7 +474,7 @@ class MultipolesDir:
             filename = os.path.split(f)[1]
             matched_h5 = rx_h5.match(filename)
             matched_ascii = rx_ascii.match(filename)
-            matched_IL = rx_IL(filename)
+            matched_IL = rx_IL.match(filename)
             if matched_h5 is not None:
                 variable_name = matched_h5.group(1).lower()
                 var_list = self._vars_h5.setdefault(variable_name, set())
@@ -490,8 +490,8 @@ class MultipolesDir:
             elif matched_IL is not None:
                 variable_name = "psi4" # all keys must be lower-case
                 var_list = self._vars_IL.setdefault(variable_name, set())
-                data = numpy.genfromtxt(f) # Unfortunately there's no way to check this without opening the file
-                radius = data[:, -4] # save all radii timesteps (will be useful later)
+                data = np.genfromtxt(f) # Unfortunately there's no way to check this without opening the file
+                radius = data[0, -4]
                 if (data.shape[1] - 5)%2 != 0:
                     raise RuntimeError('Wrong format')
                 nmodes = (data.shape[1] - 5)//2
@@ -501,7 +501,7 @@ class MultipolesDir:
                 while (i <= nmodes):
                     m = l
                     while (m >= -l and i <= nmodes):
-                        var_list.append((l,m,radius,f))
+                        var_list.add((l,m,radius,f))
                         m = m - 1
                         i = i + 1
                     l = l+1
@@ -556,6 +556,20 @@ class MultipolesDir:
         # Make single complex array & return as timeseries
         complex_mp = data[:, ncol] + 1.j*data[:, ncol+1]
         return timeseries.remove_duplicated_iters(data[:, 0], complex_mp)
+
+    @staticmethod
+    def _radius_from_IL_Psi4_file(path):
+        """Read radius data from an IL code Psi4 file.
+
+        :param path: File to read.
+        :type path: str
+
+        :returns: Multipole data.
+        :rtype: :py:class:`~.TimeSeries`
+        """
+        data = np.genfromtxt(path)
+
+        return data[:, -4] 
 
 
     @staticmethod
@@ -623,10 +637,10 @@ class MultipolesDir:
             (
                 mult_l,
                 mult_m,
-                radius,
+                self._radius_from_IL_Psi4_file(filename),
                 self._multipole_from_IL_Psi4_file(filename, mult_l, mult_m),
             )
-            for mult_l, mult_m, radius, filename in mpfiles
+            for mult_l, mult_m, _, filename in mpfiles
         ]
         return MultipoleAllDets(alldets)
 
@@ -694,7 +708,7 @@ class MultipolesDir:
         """
         # We merge the dictionaries and return the keys.
         # This automatically takes care of making sure that they keys are unique.
-        return {**self._vars_h5, **self._vars_ascii}.keys()
+        return {**self._vars_h5, **self._vars_ascii, **self._vars_IL}.keys()
 
     def __str__(self):
         """NOTE: __str__ requires opening all the h5 files! This can be slow!"""
