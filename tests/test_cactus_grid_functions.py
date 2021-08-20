@@ -121,14 +121,14 @@ class TestAllGridFunctions(unittest.TestCase):
 
         # Here we can we find all the variables
         self.assertCountEqual(
-            list(self.gf._vars_ascii.keys()),
+            list(self.gf._vars_ascii_files.keys()),
             ["rho_b", "P", "vx", "vy", "vz", "rho_star"],
         )
 
         # Here we also have the grid arrays in
         # diskdiagnostics-integrated_quantities.xy.h5
         self.assertCountEqual(
-            list(self.gf._vars_h5.keys()),
+            list(self.gf._vars_h5_files.keys()),
             [
                 "rho_b",
                 "P",
@@ -507,3 +507,17 @@ class TestOneGridFunction(unittest.TestCase):
         # Test file with wrong name
         with self.assertRaises(RuntimeError):
             self.rho_star._parse_file("/tmp/wrongname")
+
+    def test_clear_cache(self):
+
+        # Read something
+        self.P[0]
+
+        # Check that we saved something
+        self.assertIsNotNone(self.P.alldata[self.P_file][0][0][0])
+
+        # Remove that something
+        self.P.clear_cache()
+
+        # Check that we are clear
+        self.assertIsNone(self.P.alldata[self.P_file][0][0][0])

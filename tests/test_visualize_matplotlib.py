@@ -17,7 +17,6 @@
 
 import os
 import unittest
-from unittest.mock import patch
 
 # We use the agg backend because it should work everywhere
 import matplotlib
@@ -29,6 +28,7 @@ import numpy as np
 from kuibit import cactus_grid_functions as cgf
 from kuibit import grid_data as gd
 from kuibit import grid_data_utils as gdu
+from kuibit import masks as km
 from kuibit import visualize_matplotlib as viz
 from kuibit.simdir import SimDir
 
@@ -147,7 +147,7 @@ class TestVisualizeMatplotlib(unittest.TestCase):
         self.assertEqual(ret3[1]["xlabel"], "x")
 
         # Test with resample=True
-        ret5 = dec_func_grid(
+        _ = dec_func_grid(
             data=cactus_ascii,
             iteration=0,
             shape=ugd.shape,
@@ -155,6 +155,17 @@ class TestVisualizeMatplotlib(unittest.TestCase):
             ylabel="y",
             resample=True,
         )
+
+        # Test with masked data
+
+        # HierarchicalGrid
+        hg_m = km.arcsin(gd.HierarchicalGridData([ugd]))
+        with self.assertWarns(Warning):
+            dec_func_grid(data=hg_m, shape=[10, 10])
+
+        ugd_m = km.arcsin(ugd)
+        with self.assertWarns(Warning):
+            dec_func_grid(data=ugd_m, shape=[10, 10], x0=[1, 3])
 
     def test_vmin_vmax_extend(self):
 
@@ -322,15 +333,37 @@ class TestVisualizeMatplotlib(unittest.TestCase):
 
     def test_save(self):
 
-        plt.plot([1, 1], [2, 2])
+        x = np.linspace(0, 1, 100)
+        y = np.sin(x)
+
+        plt.plot(x, y)
+
         # Test matplotlib
         viz.save("test.pdf")
         self.assertTrue(os.path.exists("test.pdf"))
         os.remove("test.pdf")
 
         # Test tikzplotlib
-        viz.save("test.tikz")
+        viz.save("test.tikz", include_disclaimer=False)
         self.assertTrue(os.path.exists("test.tikz"))
+
+        # We save the file size so that we can compare it to the "cleaned"
+        # version
+        file_size_og = os.stat("test.tikz").st_size
+
+        os.remove("test.tikz")
+
+        # Test with clean figure
+        viz.save(
+            "test.tikz",
+            tikz_clean_figure=True,
+            target_resolution=200,
+            include_disclaimer=False,
+        )
+        self.assertTrue(os.path.exists("test.tikz"))
+        # The cleaned file should be smaller
+        file_size_cleaned = os.stat("test.tikz").st_size
+        self.assertLess(file_size_cleaned, file_size_og)
         os.remove("test.tikz")
 
     def test_save_from_dir_name_ext(self):

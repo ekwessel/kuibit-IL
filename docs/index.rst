@@ -18,6 +18,8 @@ contains video tutorials on ``kuibit``.
 The :doc:`testimonials page <testimonials>` collects short user's reviews about
 ``kuibit``.
 
+New to ``kuibit``? Read :doc:`First steps with kuibit <first_steps>`.
+
 Summary of Features
 -------------------
 
@@ -67,7 +69,7 @@ Installation
 If they are not already available, ``pip`` will install all the necessary
 dependencies.
 
-The minimum version of Python required is 3.6.
+The minimum version of Python required is 3.6.1.
 
 If you intend to extend/develop ``kuibit``, follow the instruction on
 `GitHub <https://github.com/Sbozzolo/kuibit>`_.
@@ -88,12 +90,14 @@ Usage
 .. toctree::
    :maxdepth: 1
 
+   first_steps.rst
    simdir.rst
    series.rst
    cactus_scalars.rst
    cactus_multipoles.rst
    cactus_horizons.rst
    cactus_waves.rst
+   masks.rst
    gw_utils.rst
    gw_mismatch.rst
    grid_data.rst
@@ -145,6 +149,8 @@ Scripts
 .. toctree::
    :maxdepth: 1
 
+   examples/bins/picklify.rst
+   examples/bins/plot_1d_slice.rst
    examples/bins/plot_1d_vars.rst
    examples/bins/plot_ah_coordinate_velocity.rst
    examples/bins/plot_ah_found.rst
@@ -153,8 +159,11 @@ Scripts
    examples/bins/plot_constraints.rst
    examples/bins/plot_em_energy.rst
    examples/bins/plot_grid_var.rst
+   examples/bins/plot_grid_expr.rst
    examples/bins/plot_gw_energy.rst
+   examples/bins/plot_gw_angular_momentum.rst
    examples/bins/plot_gw_linear_momentum.rst
+   examples/bins/plot_phi_time_averaged.rst
    examples/bins/plot_phi_lm.rst
    examples/bins/plot_physical_time.rst
    examples/bins/plot_psi4_lm.rst
@@ -164,6 +173,7 @@ Scripts
    examples/bins/print_ah_formation_time.rst
    examples/bins/print_available_iterations.rst
    examples/bins/print_available_timeseries.rst
+   examples/bins/print_grid_point_minmax.rst
    examples/bins/print_qlm_properties_at_time.rst
    examples/bins/save_resampled_grid_data.rst
 
@@ -187,6 +197,7 @@ Reference material (classes, functions, ...)
 .. toctree::
    :maxdepth: 1
 
+   recommendation_examples.rst
    testimonials.rst
    features.rst
    faq.rst
@@ -202,6 +213,7 @@ Reference material (classes, functions, ...)
    gw_utils_ref.rst
    gw_mismatch_ref.rst
    grid_data_ref.rst
+   masks_ref.rst
    sensitivity_curves_ref.rst
    unitconv_ref.rst
    visualize_matplotlib_ref.rst
@@ -254,3 +266,16 @@ consider citing ``kuibit`` if you find the software useful. You can use the foll
            adsurl = {https://ui.adsabs.harvard.edu/abs/2021JOSS....6.3099B},
           adsnote = {Provided by the SAO/NASA Astrophysics Data System}
     }
+
+``kuibit`` is built with ``NumPy``, ``SciPy``, and ``h5py``, and optionally uses
+``matplotlib``, ``mayavi``, and ``numba``. Consider citing these packages too.
+
+Disclaimer
+------------
+
+``kuibit`` is developed as professional tool that can be used for research to be
+published in peer-reviewed journals. As such, ``kuibit`` is tested to ensure
+that results are scientifically sound. However, we do not guarantee that the
+entirety of the software is correct and does what it is intended to do. Hence,
+users are strongly recommended to perform their independent validations and to
+report any problem.

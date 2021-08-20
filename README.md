@@ -4,7 +4,8 @@
 
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.03099/status.svg)](https://doi.org/10.21105/joss.03099)
 [![codecov](https://codecov.io/gh/Sbozzolo/kuibit/branch/master/graph/badge.svg)](https://codecov.io/gh/Sbozzolo/kuibit)
-![Tests](https://github.com/Sbozzolo/kuibit/workflows/Tests/badge.svg)
+![Test](https://github.com/Sbozzolo/kuibit/workflows/Test/badge.svg)
+![Lint](https://github.com/Sbozzolo/kuibit/workflows/Lint/badge.svg)
 ![Documentation](https://github.com/Sbozzolo/kuibit/workflows/Document/badge.svg)
 [![GPLv3
 license](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
@@ -25,7 +26,7 @@ page is mainly intended for developers. Documentation for users is available
 
 - [Official documentation](https://sbozzolo.github.io/kuibit)
 - [Tutorials](https://sbozzolo.github.io/kuibit/#tutorials)
-- [Examples](https://sbozzolo.github.io/kuibit/#id1)
+- [Examples](https://sbozzolo.github.io/kuibit/#examples)
 - [Archive with most recent examples and tools](https://github.com/sbozzolo/kuibit/releases/latest/download/examples.tar.gz)
 - [Changelog](https://github.com/Sbozzolo/kuibit/releases)
 - [What people say about kuibit](https://sbozzolo.github.io/kuibit/testimonials.html)
@@ -43,7 +44,7 @@ pip3 install kuibit
 ```
 If they are not already available, `pip` will install all the necessary dependencies.
 
-The minimum version of Python required is 3.6.
+The minimum version of Python required is 3.6.1.
 
 If you intend to develop ``kuibit``, follow the instruction below.
 
@@ -67,6 +68,17 @@ in installed running the command `poetry env info --path` in the `kuibit` direct
 This is a standard virtual environment, which can be activated with the `activate`
 scripts in the `bin` folder. Once you do that, you will be able to use `kuibit`
 for anywhere.
+
+As of version `1.3.0`, we adopt the following  philosophy for `git` branches:
+- `master` always corresponds to the latest stable version, the one available on
+  PyPI. Hotfixes are applied directly on master, and a new release is tagged.
+- `next` is where most of the development occurs. This corresponds to the next
+  version of `kuibit`. `next` often experiences rebasing.
+- Specific features that can be developed on their separate feature branch. This
+  will be merged into `next`.
+
+The documentation of the development version is served at
+[sbozzolo.github.io/kuibit/dev](https://sbozzolo.github.io/kuibit/dev).
 
 ## Help!
 
@@ -94,6 +106,7 @@ compiling the documentation will fail.
 Here is a list of videos describing `kuibit` and how to use it:
 - [Introduction on kuibit - Einstein Toolkit Seminar, 2021](https://www.youtube.com/watch?v=7-F2xh-m31A)
 - [Using kuibit](https://www.youtube.com/playlist?list=PLIVVtc6RlFxpi3BiF6KTWd3z4TTQ5hY06)
+- [kuibit - Einstein Toolkit Summer School, 2021](https://youtu.be/g-JlXfLvUZU)
 
 The [Using
 kuibit](https://www.youtube.com/playlist?list=PLIVVtc6RlFxpi3BiF6KTWd3z4TTQ5hY06)
@@ -157,3 +170,16 @@ archivePrefix = {arXiv},
 }
 ```
 You can find this entry in Python with `from kuibit import __bibtex__`.
+
+`kuibit` is built with `NumPy`, `SciPy`, and `h5py`, and optionally uses
+`matplotlib`, `mayavi`, and `numba`. Consider citing these packages too.
+
+## Disclaimer
+
+`kuibit` is developed as professional tool that can be used for research to be
+published in peer-reviewed journals. As such, `kuibit` is tested to ensure that
+results are scientifically sound. However, we do not guarantee that the entirety
+of the software is correct and does what it is intended to do. Hence, users are
+strongly recommended to perform their independent validations and to report any
+problem.
+

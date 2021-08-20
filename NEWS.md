@@ -1,5 +1,101 @@
 # Changelog
 
+## Version 1.3.0 (Under development)
+
+#### `SimDir` can now be cached in pickle files
+
+`kuibit` tries to do as much lazy-loading as possible. For examples, files are
+opened only when needed. When analyzing simulations it is useful to save the
+work done by `kuibit` to avoid re-doing the same operations over and over. It is
+now possible to do this using pickle files. `SimDir` can now be used as a
+context manager and the progresses can be loaded and saved from files. For
+example:
+
+```python
+with SimDir("path_of_simulation", pickle_file="simdir.pickle") as sim:
+    # do operations
+```
+
+In this case, if `pickle_file` exists, it will be loaded (ignoring all the other
+arguments passed to `SimDir`), and it will be kept updated with the additional
+work done by `kuibit`. If `pickle_file` does not exist, the `SimDir` will be
+created as usual as a `pickle_file` will be generated.
+
+It is important to stress that, when using pickles, no consistency check with
+the current state of the simulation is performed. If the simulation changes
+(e.g., new checkpoints are added), this will result in errors. In that case, a
+new pickle file must be produced.
+
+#### Masked data
+
+Numerical objects now support
+[mask](https://numpy.org/doc/stable/reference/maskedarray.generic.html), which
+can be used to ignore part of the data that satisfy certain conditions (for
+example, to exclude the atmosphere from GRMHD computations).
+
+Note that it is not possible to perform interpolation with masked data, so
+several methods will not work.
+
+Note also that we mask only the data, not the independent coordinate (e.g., the
+time in TimeSeries or the spatial coordinates in the UniformGridData). In case
+you need masked coordinates too, you can use the `mask` method to obtain an
+array of booleans that identifies the valid data.
+
+- `Series`, `UniformGridData`, `HierarhicalGridData` have a new method
+  `is_masked`.
+- `Series`, `UniformGridData`, `HierarhicalGridData` have a new method
+  `mask` that identifies where data is invalid.
+- `Series`, `UniformGridData`, `HierarhicalGridData` have news methods to create
+  masked data (e.g., `mask_greater`). See complete list in documentation.
+- `Series` have new methods `mask_remove` and `mask_removed` to create objects
+   without masked data.
+- `Series` have new methods `mask_apply` and `mask_applyed` to create objects
+   with a given mask (as the one obtained with the `mask` method).
+
+#### General
+- `SimDir` can be saved to disk with the method `save` and read with the
+   function `load_SimDir`. This is useful to work with a simulation that has
+   finished.
+- Examples can now use pickles.
+- New CI workflow: linting.
+- New `First Steps` documentation page.
+
+#### Features
+
+- `time_at_maximum` and `time_at_minimum` in `TimeSeries` can now take the
+  optional argument `absolute`.
+- Added `x_at_minimum_y` and `x_at_maximum_y` to `BaseNumerical`.
+- Added `coordinates_at_maximum` and `coordinates_at_minimum` for grid data.
+- Added `HierarchicalGridData.is_complex()`.
+- Added `tikz_clean_figure` to `visualize_matplotlib.save`, to
+  `argparse_helper.add_figure`, and to examples. This can be used to reduce
+  the size of output `tikz` files.
+- Added `clear_cache` in `OneGridFunction`.
+
+#### Breaking changes
+- The `ignore` parameter in `SimDir` has been renamed to `ignored_dirs`.
+
+#### Bug fixes
+
+- `plot_colorbar` does not steal axis focus anymore.
+- The legend in `plot_psi4_lm` was corrected.
+- `visualize_matplotlib.save` now correctly supports the `figure` argument.
+- `plot_strain_lm.py` no longer crashes when `window_args` is not provided.
+- `HierarchicalGridData` now owns the components.
+- Clear `OneGridFunction` cache in `grid_var` to avoid death by OOM.
+- Uniform constructor of `GridSeries` with constructors of other `Series`.
+
+#### New examples
+
+Scripts:
+
+* `picklify.py`
+* `plot_1d_slice.py`
+* `plot_grid_expr.py`
+* `plot_phi_time_averaged.py`
+* `plot_gw_angular_momentum.py`
+* `print_grid_point_minmax.py`
+
 ## Version 1.2.0 (1 June 2021)
 
 #### New module: visualize_matplotlib

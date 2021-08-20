@@ -35,30 +35,36 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dimension",
         help="Print only for the given dimension.",
+        choices=dimensions,
     )
     args = kah.get_args(parser)
 
-    reader = SimDir(
-        args.datadir, ignore_symlinks=args.ignore_symlinks
-    ).gridfunctions
+    with SimDir(
+        args.datadir,
+        ignore_symlinks=args.ignore_symlinks,
+        pickle_file=args.pickle_file,
+    ) as sim:
+        reader = sim.gridfunctions
 
-    # We loop over dimensions
-    if args.dimension is not None:
-        if args.variable not in reader[args.dimension]:
-            raise RuntimeError(
-                f"Variable {args.variable} of dimension {args.dimension} not available"
-            )
-        for it in reader[args.dimension][args.variable].available_iterations:
-            print(it, end=" ")
-        print()
-    else:
-        # First we check that we have the variable
-        if not any(args.variable in reader[dim] for dim in dimensions):
-            raise RuntimeError(f"Variable {args.variable} not available")
-        # Okay, we have something
-        for dim in dimensions:
-            if args.variable in reader[dim]:
-                print(f"# {dim}")
-                for it in reader[dim][args.variable].available_iterations:
-                    print(it, end=" ")
-                print()
+        # We loop over dimensions
+        if args.dimension is not None:
+            if args.variable not in reader[args.dimension]:
+                raise RuntimeError(
+                    f"Variable {args.variable} of dimension {args.dimension} not available"
+                )
+            for it in reader[args.dimension][
+                args.variable
+            ].available_iterations:
+                print(it, end=" ")
+            print()
+        else:
+            # First we check that we have the variable
+            if not any(args.variable in reader[dim] for dim in dimensions):
+                raise RuntimeError(f"Variable {args.variable} not available")
+            # Okay, we have something
+            for dim in dimensions:
+                if args.variable in reader[dim]:
+                    print(f"# {dim}")
+                    for it in reader[dim][args.variable].available_iterations:
+                        print(it, end=" ")
+                    print()

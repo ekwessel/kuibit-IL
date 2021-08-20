@@ -34,6 +34,8 @@ takes a list of series and resamples them to their common points.
 
 """
 
+import warnings
+
 import numpy as np
 from scipy import integrate, interpolate, signal
 
@@ -249,6 +251,18 @@ class BaseSeries(BaseNumerical):
         return AttributeDictionary({"values": self.x})
 
     @property
+    def mask(self):
+        """Return where the data is valid (according to the mask).
+
+        :returns: Array of True/False of the same length of the data.
+                  False where the data is valid, true where is not.
+        :rtype: 1D array of bool
+        """
+        if self.is_masked():
+            return np.ma.getmask(self.y)
+        return np.zeros(len(self), dtype=bool)
+
+    @property
     def xmin(self):
         """Return the minimum of the independent variable x.
 
@@ -301,6 +315,33 @@ class BaseSeries(BaseNumerical):
         """
         return issubclass(self.y.dtype.type, complex)
 
+    def is_masked(self):
+        """Return whether the x or y are masked.
+
+        :returns:  True if the x or y are masked, false if it is not.
+        :rtype:   bool
+
+        """
+        return isinstance(self.y, np.ma.MaskedArray) or isinstance(
+            self.x, np.ma.MaskedArray
+        )
+
+    def x_at_maximum_y(self):
+        """Return the value of x when y is maximum.
+
+        :returns: Value of x when y is maximum.
+        :rtype: float
+        """
+        return self.x[np.argmax(self.y)]
+
+    def x_at_minimum_y(self):
+        """Return the value of x when y is minimum.
+
+        :returns: Value of x when y is minimum.
+        :rtype: float
+        """
+        return self.x[np.argmin(self.y)]
+
     def x_at_abs_maximum_y(self):
         """Return the value of x when abs(y) is maximum.
 
@@ -338,6 +379,9 @@ class BaseSeries(BaseNumerical):
             raise ValueError(
                 f"Too few points to compute a spline of order {k}"
             )
+
+        if self.is_masked():
+            raise RuntimeError("Splines with masked data are not supported.")
 
         self.spline_real = interpolate.splrep(
             self.x, self.y.real, k=k, s=s, *args, **kwargs
@@ -509,7 +553,7 @@ class BaseSeries(BaseNumerical):
             piecewise_constant=piecewise_constant,
         )
 
-    def _apply_binary(self, other, function):
+    def _apply_binary(self, other, function, *args, **kwargs):
         """This is an abstract function that is used to implement mathematical
         operations with other series (if they have the same x) or
         scalars.
@@ -535,12 +579,14 @@ class BaseSeries(BaseNumerical):
                 raise ValueError("The objects do not have the same x!")
             return type(self)(
                 self.x,
-                function(self.y, other.y),
+                function(self.y, other.y, *args, **kwargs),
                 True,
             )
         # If it is a number
         if isinstance(other, (int, float, complex)):
-            return type(self)(self.x, function(self.y, other), True)
+            return type(self)(
+                self.x, function(self.y, other, *args, **kwargs), True
+            )
 
         # If we are here, it is because we cannot add the two objects
         raise TypeError("I don't know how to combine these objects")
@@ -548,7 +594,7 @@ class BaseSeries(BaseNumerical):
     def __eq__(self, other):
         """Check for equality up to numerical precision."""
         if isinstance(other, type(self)):
-            return np.allclose(self.x, other.x, atol=1e-14) and np.allclose(
+            return np.allclose(self.x, other.x, atol=1e-14) and np.ma.allclose(
                 self.y, other.y, atol=1e-14
             )
         return False
@@ -579,6 +625,12 @@ class BaseSeries(BaseNumerical):
         :type file_name: str
 
         """
+        if self.is_masked():
+            warnings.warn(
+                "Discarding mask information.",
+                RuntimeWarning,
+            )
+
         if self.is_complex():
             np.savetxt(
                 file_name,
@@ -601,12 +653,70 @@ class BaseSeries(BaseNumerical):
         :returns: A new series with only finite values.
         :rtype: :py:class:`~.BaseSeries` or derived class
         """
-        msk = np.isfinite(self.y)
-        return type(self)(self.x[msk], self.y[msk], True)
+        mask = np.isfinite(self.y)
+        return type(self)(self.x[mask], self.y[mask], True)
 
     def nans_remove(self):
         """Filter out nans/infinite values."""
         self._apply_to_self(self.nans_removed)
+
+    def mask_removed(self):
+        """Remove masked value.
+
+        Return a new series with valid values only.
+
+        :returns: A new series with only valid values.
+        :rtype: :py:class:`~.BaseSeries` or derived class
+        """
+        if self.is_masked():
+            mask = np.invert(self.mask)
+            return type(self)(self.x[mask], self.y[mask], True)
+
+        # We can copy the spline
+        return self.copy()
+
+    def mask_remove(self):
+        """Remove masked values."""
+        self._apply_to_self(self.mask_removed)
+
+    def mask_applied(self, mask, ignore_existing=False):
+        """Return a new series with given mask applied to the data.
+
+        If a previous mask already exists, the new mask will be added on top,
+        unless ``ignore_existing`` is True.
+
+        :param mask: Array of booleans that identify where the data is invalid.
+                     This can be obtained with the method :py:meth:`~.mask`.
+        :type mask: 1D NumPy array
+
+        :param ignore_existing: If True, overwrite any previously existing mask.
+        :type ignore_existing: bool
+
+        :returns: New series with mask applied.
+        :rtype: :py:class:`~.BaseSeries`
+
+        """
+        if self.is_masked() and not ignore_existing:
+            mask = np.ma.mask_or(mask, self.mask)
+
+        return type(self)(self.x, np.ma.MaskedArray(self.y, mask=mask), True)
+
+    def mask_apply(self, mask, ignore_existing=False):
+        """Apply given mask.
+
+        If a previous mask already exists, the new mask will be added on top,
+        unless ``ignore_existing`` is True.
+
+        :param mask: Array of booleans that identify where the data is invalid.
+                     This can be obtained with the method :py:meth:`~.mask`.
+        :type mask: 1D NumPy array
+
+        :param ignore_existing: If True, overwrite any previously existing mask.
+        :type ignore_existing: bool
+        """
+        self._apply_to_self(
+            self.mask_applied, mask, ignore_existing=ignore_existing
+        )
 
     def integrated(self, dx=None):
         """Return a series that is the integral computed with method of
@@ -622,6 +732,11 @@ class BaseSeries(BaseNumerical):
         :rtype:    :py:class:`~.BaseSeries` or derived class
 
         """
+        if self.is_masked():
+            raise RuntimeError(
+                "Integration with masked data is not supported."
+            )
+
         # We pass self.x only if dx was not provided
         passing_x = self.x if dx is None else None
         return type(self)(
@@ -703,6 +818,11 @@ class BaseSeries(BaseNumerical):
         :rtype:    :py:class:`~.BaseSeries` or derived class
 
         """
+        if self.is_masked():
+            raise RuntimeError(
+                "Differentiation with masked data is not supported."
+            )
+
         ret_value = self.y
         for _num_deriv in range(order):
             ret_value = np.gradient(ret_value, self.x, edge_order=2)
@@ -744,6 +864,9 @@ class BaseSeries(BaseNumerical):
         :rtype:    :py:class:`~.BaseSeries` or derived class
 
         """
+        if self.is_masked():
+            raise RuntimeError("Smoothing with masked data is not supported.")
+
         if self.is_complex():
             return type(self)(
                 self.x,
@@ -821,7 +944,7 @@ class BaseSeries(BaseNumerical):
     clip = crop
     clipped = cropped
 
-    def _apply_unary(self, function):
+    def _apply_unary(self, function, *args, **kwargs):
         """Apply a unary function to the data.
 
         :param function: Function to apply to the series.
@@ -831,9 +954,9 @@ class BaseSeries(BaseNumerical):
         :rtype: :py:class:`~.BaseSeries` or derived class
 
         """
-        return type(self)(self.x, function(self.y), True)
+        return type(self)(self.x, function(self.y, *args, **kwargs), True)
 
-    def _apply_reduction(self, reduction):
+    def _apply_reduction(self, reduction, *args, **kwargs):
         """Apply a reduction to the data.
 
         :param function: Function to apply to the series.
@@ -843,7 +966,7 @@ class BaseSeries(BaseNumerical):
         :rtype: float
 
         """
-        return reduction(self.y)
+        return reduction(self.y, *args, **kwargs)
 
 
 def sample_common(series, resample=False, piecewise_constant=False):

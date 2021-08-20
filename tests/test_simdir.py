@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, see <https://www.gnu.org/licenses/>.
 
+import os
+import pickle
 import unittest
 
 from kuibit import simdir as sd
@@ -88,3 +90,47 @@ class TestSimDir(unittest.TestCase):
         # Test symlink
         sim_with_symlink = sd.SimDir("tests/tov", ignore_symlinks=False)
         self.assertEqual(len(sim_with_symlink.allfiles), 447)
+
+    def test_pickle(self):
+
+        path = "/tmp/sim.pickle"
+
+        self.sim.save(path)
+
+        loaded_sim = sd.load_SimDir(path)
+
+        self.assertCountEqual(self.sim.__dict__, loaded_sim.__dict__)
+
+        # Test load from pickle
+
+        loaded_sim2 = sd.SimDir(
+            "tests/tov", max_depth=0, pickle_file="/tmp/sim.pickle"
+        )
+
+        self.assertCountEqual(self.sim.__dict__, loaded_sim2.__dict__)
+
+        # Test as a context manager
+
+        with sd.SimDir("tests/tov", pickle_file="/tmp/sim.pickle") as sim:
+            self.assertCountEqual(self.sim.__dict__, sim.__dict__)
+            # Make a change
+            sim.max_depth = 10
+
+        loaded_sim3 = sd.load_SimDir(path)
+        self.assertEqual(loaded_sim3.max_depth, 10)
+
+        os.remove(path)
+
+        # Test with pickle not being a simdir
+
+        with open(path, "wb") as file_:
+            pickle.dump(1, file_)
+
+        with self.assertRaises(RuntimeError):
+            sd.load_SimDir(path)
+
+        os.remove(path)
+
+    def test_rescan(self):
+        # This is not a real test ...
+        self.sim.rescan()

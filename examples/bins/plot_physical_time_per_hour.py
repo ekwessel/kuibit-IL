@@ -19,6 +19,7 @@
 import logging
 
 import matplotlib.pyplot as plt
+
 from kuibit import argparse_helper as kah
 from kuibit.simdir import SimDir
 from kuibit.visualize_matplotlib import (
@@ -51,27 +52,37 @@ wall-time hour and day."""
     figname = get_figname(args, default="physical_time_per_hour")
     logger.debug(f"Using figname {figname}")
 
-    sim = SimDir(args.datadir, ignore_symlinks=args.ignore_symlinks)
-    logger.debug("Prepared SimDir")
+    with SimDir(
+        args.datadir,
+        ignore_symlinks=args.ignore_symlinks,
+        pickle_file=args.pickle_file,
+    ) as sim:
 
-    if "physical_time_per_hour" not in sim.ts.scalar:
-        raise ValueError("physical_time_per_hour not available")
+        logger.debug("Prepared SimDir")
 
-    phys_time = sim.ts.scalar["physical_time_per_hour"]
+        if "physical_time_per_hour" not in sim.ts.scalar:
+            raise ValueError("physical_time_per_hour not available")
 
-    logger.debug("Plotting physical_time_per_hour")
+        phys_time = sim.ts.scalar["physical_time_per_hour"]
 
-    plt.plot(phys_time)
-    plt.xlabel("Simulation Time")
-    plt.ylabel("Simulated physical time per hour")
+        logger.debug("Plotting physical_time_per_hour")
 
-    # Adding a second y axis
-    plt.twinx()
-    plt.plot(phys_time * 24)
-    plt.ylabel(r"Simulated physical time per day")
-    set_axis_limits_from_args(args)
-    logger.debug("Plotted")
+        plt.plot(phys_time)
+        plt.xlabel("Simulation Time")
+        plt.ylabel("Simulated physical time per hour")
 
-    logger.debug("Saving")
-    save_from_dir_filename_ext(args.outdir, figname, args.fig_extension)
-    logger.debug("DONE")
+        # Adding a second y axis
+        plt.twinx()
+        plt.plot(phys_time * 24)
+        plt.ylabel(r"Simulated physical time per day")
+        set_axis_limits_from_args(args)
+        logger.debug("Plotted")
+
+        logger.debug("Saving")
+        save_from_dir_filename_ext(
+            args.outdir,
+            figname,
+            args.fig_extension,
+            tikz_clean_figure=args.tikz_clean_figure,
+        )
+        logger.debug("DONE")

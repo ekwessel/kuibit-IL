@@ -19,6 +19,7 @@
 import logging
 
 import matplotlib.pyplot as plt
+
 from kuibit import argparse_helper as kah
 from kuibit.simdir import SimDir
 from kuibit.visualize_matplotlib import (
@@ -91,51 +92,68 @@ the order as they appear in the TimeSeries method."""
     )
     logger.debug(f"Using figname {figname}")
 
-    sim = SimDir(args.datadir, ignore_symlinks=args.ignore_symlinks)
-    logger.debug("Prepared SimDir")
-    reader = sim.gravitationalwaves
+    with SimDir(
+        args.datadir,
+        ignore_symlinks=args.ignore_symlinks,
+        pickle_file=args.pickle_file,
+    ) as sim:
 
-    radius = reader.radii[args.detector_num]
-    logger.debug(f"Using radius: {radius}")
-    detector = reader[radius]
+        logger.debug("Prepared SimDir")
+        reader = sim.gravitationalwaves
 
-    if (args.mult_l, args.mult_m) not in detector.available_lm:
-        logger.debug(f"Available multipoles {detector.available_lm}")
-        raise ValueError(
-            f"Multipole {args.mult_l}, {args.mult_m} not available"
+        radius = reader.radii[args.detector_num]
+        logger.debug(f"Using radius: {radius}")
+        detector = reader[radius]
+
+        if (args.mult_l, args.mult_m) not in detector.available_lm:
+            logger.debug(f"Available multipoles {detector.available_lm}")
+            raise ValueError(
+                f"Multipole {args.mult_l}, {args.mult_m} not available"
+            )
+
+        logger.debug("Computing strain")
+
+        # We are going to do tuple unpacking, and we cannot unpack "None",
+        # so we overwrite the value with an empty list
+        if args.window_args is None:
+            args.window_args = []
+
+        strain = detector.get_strain_lm(
+            args.mult_l,
+            args.mult_m,
+            args.pcut,
+            *args.window_args,
+            window_function=args.window,
         )
 
-    logger.debug("Computing strain")
+        logger.debug("Plotting")
 
-    strain = detector.get_strain_lm(
-        args.mult_l,
-        args.mult_m,
-        args.pcut,
-        *args.window_args,
-        window_function=args.window,
-    )
+        plt.plot(
+            strain.real(),
+            label=fr"$r_{{\mathrm{{ex}}}} h^{{{args.mult_l}{args.mult_m}}}_+$",
+        )
+        plt.plot(
+            -strain.imag(),
+            label=fr"$r_{{\mathrm{{ex}}}} h^{{{args.mult_l}{args.mult_m}}}_\times$",
+        )
 
-    logger.debug("Plotting")
+        plt.legend()
+        plt.xlabel("Time")
+        plt.ylabel(fr"$r_{{\mathrm{{ex}}}} h^{{{args.mult_l}{args.mult_l}}}$")
 
-    plt.plot(
-        strain.real(),
-        label=fr"$r_{{\mathrm{{ex}}}} h^{{{args.mult_l}{args.mult_m}}}_+$",
-    )
-    plt.plot(
-        -strain.imag(),
-        label=fr"$r_{{\mathrm{{ex}}}} h^{{{args.mult_l}{args.mult_m}}}_\times$",
-    )
+        add_text_to_corner(
+            f"Det {args.detector_num}", anchor="SW", offset=0.005
+        )
+        add_text_to_corner(fr"$r = {radius:.3f}$", anchor="NE", offset=0.005)
 
-    plt.legend()
-    plt.xlabel("Time")
-    plt.ylabel(fr"$r_{{\mathrm{{ex}}}} h^{{{args.mult_l}{args.mult_l}}}$")
+        set_axis_limits_from_args(args)
+        logger.debug("Plotted")
 
-    add_text_to_corner(f"Det {args.detector_num}", anchor="SW", offset=0.005)
-    add_text_to_corner(fr"$r = {radius:.3f}$", anchor="NE", offset=0.005)
-
-    set_axis_limits_from_args(args)
-    logger.debug("Plotted")
-
-    logger.debug("Saving")
-    save_from_dir_filename_ext(args.outdir, figname, args.fig_extension)
-    logger.debug("DONE")
+        logger.debug("Saving")
+        save_from_dir_filename_ext(
+            args.outdir,
+            figname,
+            args.fig_extension,
+            tikz_clean_figure=args.tikz_clean_figure,
+        )
+        logger.debug("DONE")

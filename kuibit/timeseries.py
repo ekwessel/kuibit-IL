@@ -2,8 +2,9 @@
 
 # Copyright (C) 2020-2021 Gabriele Bozzola
 #
-# Based on by code originally developed by Wolfgang Kastaun. See, GitHub,
-# wokast/PyCactus/PostCactus/timeseries.py
+# Based on by code originally developed by Wolfgang Kastaun. This file may
+# contain algorithms and/or structures first implemented in
+# GitHub:wokast/PyCactus/PostCactus/timeseries.py
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -306,23 +307,35 @@ class TimeSeries(BaseSeries):
 
     duration = time_length
 
-    def time_at_maximum(self):
-        """Return the time at which the timeseries is maximum in absolute
-        value.
+    def time_at_maximum(self, absolute=True):
+        """Return the time at which the timeseries is maximum.
 
-        :returns:  Time at absolute maximum.
+        :param absolute: Whether to take the absolute value of the
+                         data.
+        :type absolute: bool
+
+        :returns:  Time at maximum. If ``absolute`` is True, then
+                   time at absolute maximum.
         :rtype:    float
         """
-        return self.x_at_abs_maximum_y()
+        if absolute:
+            return self.x_at_abs_maximum_y()
+        return self.x_at_maximum_y()
 
-    def time_at_minimum(self):
-        """Return the time at which the timeseries is minimum in absolute
-        value.
+    def time_at_minimum(self, absolute=True):
+        """Return the time at which the timeseries is minimum.
 
-        :returns:  Time at absolute minimum.
+        :param absolute: Whether to take the absolute value of the
+                         data.
+        :type absolute: bool
+
+        :returns:  Time at minimum. If ``absolute`` is True, then
+                   time at absolute minimum.
         :rtype:    float
         """
-        return self.x_at_abs_minimum_y()
+        if absolute:
+            return self.x_at_abs_minimum_y()
+        return self.x_at_minimum_y()
 
     def aligned_at_minimum(self):
         """Return a new timeseries with absolute minimum at t=0.
@@ -884,6 +897,11 @@ class TimeSeries(BaseSeries):
         :rtype: :py:class:`~.FrequencySeries`
 
         """
+        if self.is_masked():
+            raise RuntimeError(
+                "Fourier transform with masked data is not supported."
+            )
+
         if not self.is_regularly_sampled():
             warnings.warn(
                 "TimeSeries is not regularly samples. Resampling.",

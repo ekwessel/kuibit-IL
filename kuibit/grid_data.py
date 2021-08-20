@@ -2,8 +2,9 @@
 
 # Copyright (C) 2020-2021 Gabriele Bozzola
 #
-# Inspired by code originally developed by Wolfgang Kastaun. See, GitHub,
-# wokast/PyCactus/PostCactus/grid_data.py
+# Inspired by code originally developed by Wolfgang Kastaun. This file may
+# contain algorithms and/or structures first implemented in
+# GitHub:wokast/PyCactus/PostCactus/grid_data.py
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,7 +33,13 @@ A :py:class:`~.UniformGridData` object contains a :py:class:`~.UniformGrid` one.
 Similarly, a :py:class:`~.HierarchicalGridData` contains multiple
 :py:class:`~.UniformGridData`.
 
+We also define :py:class:`~.GridSeries`. This is intended to be used for 1D grid
+data and it is a way to use the infrastructure for ``Series`` for grid data. The
+reason this is useful is that ``Series`` are much simpler and leaner to work
+with.
+
 """
+import warnings
 from bisect import bisect_right
 from os.path import splitext
 
@@ -59,13 +66,17 @@ class GridSeries(BaseSeries):
     :type y: 1D NumPy array
     """
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, _=None):
         """Constructor.
+
+        The third argument can be anything. It is required to ensure
+        compatibility with other series, but it is not used.
 
         :param x: Coordinates.
         :type x: 1D NumPy array
         :param y: Values.
         :type y: 1D NumPy array
+
         """
         super().__init__(x, y, guarantee_x_is_monotonic=True)
 
@@ -273,6 +284,12 @@ class UniformGridData(BaseNumerical):
         :type file_name: str
 
         """
+        if self.is_masked():
+            warnings.warn(
+                "Discarding mask information.",
+                RuntimeWarning,
+            )
+
         if splitext(file_name)[-1] == ".npz":
             # Time and iterations could be None, in that case, we don't add them
             others = {}
@@ -435,6 +452,9 @@ class UniformGridData(BaseNumerical):
         :type k:  int
 
         """
+
+        if self.is_masked():
+            raise RuntimeError("Splines with masked data are not supported.")
 
         coords = self.grid.coordinates()
 
@@ -867,6 +887,27 @@ class UniformGridData(BaseNumerical):
         return issubclass(self.data.dtype.type, complex)
 
     @property
+    def mask(self):
+        """Return where the data is valid (according to the mask).
+
+        :returns: Array of True/False of the same shape of the data.
+                  False where the data is valid, True where is not.
+        :rtype: array of bool
+        """
+        if self.is_masked():
+            return self.data.mask
+        return np.zeros(self.data.shape, dtype=bool)
+
+    def is_masked(self):
+        """Return whether the data is masked.
+
+        :returns:  True if the data is masked, false if it is not.
+        :rtype:   bool
+
+        """
+        return np.ma.is_masked(self.data)
+
+    @property
     def dtype(self):
         return self.data.dtype
 
@@ -1116,6 +1157,8 @@ class UniformGridData(BaseNumerical):
         :returns: The positions of the data bins and the distribution.
         :rtype:   tuple of two 1D NumPy arrays.
         """
+        # Function from Wolfgang Kastaun's PostCactus
+
         if self.is_complex():
             raise ValueError("Histogram only works with real data")
 
@@ -1171,6 +1214,8 @@ class UniformGridData(BaseNumerical):
         :returns: Data values corresponding to the given fractions.
         :rtype:   1D NumPy array
         """
+        # Function from Wolfgang Kastaun's PostCactus
+
         hist_values, bin_edges = self.histogram(
             min_value=min_value,
             max_value=max_value,
@@ -1211,12 +1256,53 @@ class UniformGridData(BaseNumerical):
             return percentiles[0]
         return percentiles
 
+    def mask_applied(self, mask, ignore_existing=False):
+        """Return a new :py:class:`~.UniformGridData` with given mask applied to the
+        data.
+
+        If a previous mask already exists, the new mask will be added on top,
+        unless ``ignore_existing`` is True.
+
+        :param mask: Array of booleans that identify where the data is invalid.
+                     This can be obtained with the method :py:meth:`~.mask`.
+        :type mask: NumPy array
+
+        :param ignore_existing: If True, overwrite any previously existing mask.
+        :type ignore_existing: bool
+
+        :returns: New grid data with mask applied.
+        :rtype: :py:class:`~.UniformGridData`
+
+        """
+        if self.is_masked() and not ignore_existing:
+            mask = np.ma.mask_or(mask, self.mask)
+
+        return type(self)(self.grid, np.ma.MaskedArray(self.data, mask=mask))
+
+    def mask_apply(self, mask, ignore_existing=False):
+        """Apply the given mask.
+
+        If a previous mask already exists, the new mask will be added on top,
+        unless ``ignore_existing`` is True.
+
+        :param mask: Array of booleans that identify where the data is invalid.
+                     This can be obtained with the method :py:meth:`~.mask`.
+        :type mask: NumPy array
+
+        :param ignore_existing: If True, overwrite any previously existing mask.
+        :type ignore_existing: bool
+
+        """
+        self._apply_to_self(
+            self.mask_applied, mask, ignore_existing=ignore_existing
+        )
+
     def partial_differentiated(self, direction, order=1):
         """Return a :py:class:`~.UniformGridData` that is the numerical
         order-differentiation of the present grid_data along a given direction.
         (``order`` = number of derivatives, ie ``order=2`` is second derivative)
 
-        The derivative is calulated as centered differencing in the interior
+        The derivative is calculated as centered differencing in the interior
         and one-sided derivatives at the boundaries. Higher orders are computed
         applying the same rule recursively.
 
@@ -1231,6 +1317,11 @@ class UniformGridData(BaseNumerical):
         :rtype:    :py:class:`~.UniformGridData`
 
         """
+        if self.is_masked():
+            raise RuntimeError(
+                "Differentiation with masked data is not supported."
+            )
+
         if direction < 0 or direction >= self.num_dimensions:
             raise ValueError(
                 f"Grid has {self.num_dimensions}, dimensions, "
@@ -1290,7 +1381,55 @@ class UniformGridData(BaseNumerical):
             self.partial_differentiated, dimension, order=order
         )
 
-    def _apply_unary(self, function):
+    def _coordinates_at(self, where, absolute):
+        """Return coordinates of a point in data as selected by the given function.
+
+        :param where: Function that extract a location in the data. The function
+                      has to return a tuple, identifying the point along each of
+                      the dimensions.
+        :type where: callable
+
+        :param absolute: Whether to take the absolute value of the data.
+        :type absolute: bool
+
+        :returns: Coordinate of the point identified by ``where``.
+        :rtype: 1D NumPy array
+
+        """
+        data = np.abs(self.data) if absolute else self.data
+        index = np.unravel_index(where(data), data.shape)
+
+        # coordinates is a list, with the linear coordinates along each
+        # direction
+        coordinates = self.coordinates_from_grid()
+
+        # We loop over the coordinates and extract the element of position
+        # "pos". We collect the results in a NumPy array.
+        return np.array(
+            [coordinates[dim][pos] for dim, pos in enumerate(index)]
+        )
+
+    def coordinates_at_maximum(self, absolute=True):
+        """Return the point with maximum value.
+
+        :returns:  Coordinate at where the value is maximum. If ``absolute``
+                   is True, then the absolute value is first taken.
+        :rtype:    1D NumPy array
+
+        """
+        return self._coordinates_at(np.argmax, absolute=absolute)
+
+    def coordinates_at_minimum(self, absolute=True):
+        """Return the point with minimum value.
+
+        :returns:  Coordinate at where the value is minimum. If ``absolute``
+                   is True, then the absolute value is first taken.
+        :rtype:    1D NumPy array
+
+        """
+        return self._coordinates_at(np.argmin, absolute=absolute)
+
+    def _apply_unary(self, function, *args, **kwargs):
         """Apply a unary function to the data.
 
         :param function: Unary function.
@@ -1299,9 +1438,9 @@ class UniformGridData(BaseNumerical):
         :rtype:    :py:class:`~.UniformGridData`
 
         """
-        return type(self)(self.grid, function(self.data))
+        return type(self)(self.grid, function(self.data, *args, **kwargs))
 
-    def _apply_reduction(self, reduction):
+    def _apply_reduction(self, reduction, *args, **kwargs):
         """Apply a reduction to the data.
 
         :param function: Function to apply to the data.
@@ -1311,9 +1450,9 @@ class UniformGridData(BaseNumerical):
         :rtype: float
 
         """
-        return reduction(self.data)
+        return reduction(self.data, *args, **kwargs)
 
-    def _apply_binary(self, other, function):
+    def _apply_binary(self, other, function, *args, **kwargs):
         """This is an abstract function that is used to implement mathematical
         operations with other :py:class:`~.UniformGridData` (if they have the
         same grid) or scalars.
@@ -1341,11 +1480,15 @@ class UniformGridData(BaseNumerical):
                 and np.allclose(self.grid.dx, other.grid.dx, atol=1e-14)
             ):
                 raise ValueError("The objects do not have the same grid!")
-            return type(self)(self.grid, function(self.data, other.data))
+            return type(self)(
+                self.grid, function(self.data, other.data, *args, **kwargs)
+            )
 
         # If it is a number
         if isinstance(other, (int, float, complex)):
-            return type(self)(self.grid, function(self.data, other))
+            return type(self)(
+                self.grid, function(self.data, other, *args, **kwargs)
+            )
 
         # If we are here, it is because we cannot add the two objects
         raise TypeError("I don't know how to combine these objects")
@@ -1354,7 +1497,7 @@ class UniformGridData(BaseNumerical):
         if not isinstance(other, type(self)):
             return False
         return (
-            np.allclose(self.data, other.data, atol=1e-14)
+            np.ma.allclose(self.data, other.data, atol=1e-14)
             and self.grid == other.grid
         )
 
@@ -1371,6 +1514,11 @@ class UniformGridData(BaseNumerical):
         :rtype: :py:class:`~.UniformGridData`
 
         """
+        if self.is_masked():
+            raise RuntimeError(
+                "Fourier transform with masked data is not supported."
+            )
+
         fft_data = np.fft.fftshift(np.fft.fftn(self.data))
         # We extract the frequencies along each direction
         freqs = [
@@ -1467,8 +1615,10 @@ class HierarchicalGridData(BaseNumerical):
 
         components = {}
 
+        # Organize the components and create a copy. In creating a copy we
+        # declare ownership of the UniformGridData
         for comp in uniform_grid_data_sorted:
-            components.setdefault(comp.ref_level, []).append(comp)
+            components.setdefault(comp.ref_level, []).append(comp.copy())
 
         self.grid_data_dict = {
             ref_level: self._try_merge_components(comps)
@@ -1716,6 +1866,11 @@ class HierarchicalGridData(BaseNumerical):
         data = np.zeros(grid.shape, dtype=components[0].data.dtype)
         indices_used = np.zeros(grid.shape, dtype=components[0].data.dtype)
 
+        if any(
+            isinstance(comp.data, np.ma.MaskedArray) for comp in components
+        ):
+            data = np.ma.MaskedArray(data)
+
         for comp in components:
             # We find the index corresponding to x0 and x1 of the component
             index_x0 = ((comp.x0 - grid.x0) / grid.dx + 0.5).astype(np.int32)
@@ -1867,6 +2022,12 @@ class HierarchicalGridData(BaseNumerical):
         :rtype: list of :py:class:`~.UniformGridData`
 
         """
+        # TODO: (PERFORMANCE) Optimize method called often
+        #
+        # This method is used every time we loop over all the components. Hence,
+        # it is called by several other methods. It is important to optimize it
+        # further to improve overall performance.
+
         all_components = []
         for comps in self.grid_data_dict.values():
             all_components.extend(comps)
@@ -2061,6 +2222,34 @@ class HierarchicalGridData(BaseNumerical):
         """
         return self.first_component.iteration
 
+    def is_complex(self):
+        """Return whether the data is complex.
+
+        :returns:  True if the data is complex, false if it is not.
+        :rtype:   bool
+
+        """
+        return any(comp.is_complex() for comp in self.all_components)
+
+    @property
+    def mask(self):
+        """Return where the data is valid (according to the mask).
+
+        :returns: List of arrays of True/False, one per component
+                  in the same order as :py:meth:`~.all_components`.
+        :rtype: list of arrays of bool
+        """
+        return [comp.mask for comp in self.all_components]
+
+    def is_masked(self):
+        """Return whether the data is masked.
+
+        :returns:  True if the data is masked, false if it is not.
+        :rtype:   bool
+
+        """
+        return any(comp.is_masked() for comp in self.all_components)
+
     def copy(self):
         """Return a deep copy.
 
@@ -2068,6 +2257,50 @@ class HierarchicalGridData(BaseNumerical):
         :rtype:    :py:class:`~.HierarchicalGridData`
         """
         return type(self)(self.all_components)
+
+    def mask_applied(self, mask, ignore_existing=False):
+        """Return a new grid data with given mask applied to the data.
+
+        If a previous mask already exists, the new mask will be added on top,
+        unless ``ignore_existing`` is True.
+
+        :param mask: List of arrays of booleans (one per component) that identify
+                     where the data is invalid.
+                     This can be obtained with the method :py:meth:`~.mask`.
+        :type mask: list of NumPy array
+
+        :param ignore_existing: If True, overwrite any previously existing mask.
+        :type ignore_existing: bool
+
+        :returns: New grid data with mask applied.
+        :rtype: :py:class:`~.HierarchicalGridData`
+
+        """
+        return type(self)(
+            [
+                comp.mask_applied(mask_comp, ignore_existing=ignore_existing)
+                for comp, mask_comp in zip(self.all_components, mask)
+            ]
+        )
+
+    def mask_apply(self, mask, ignore_existing=False):
+        """Apply given mask.
+
+        If a previous mask already exists, the new mask will be added on top,
+        unless ``ignore_existing`` is True.
+
+        :param mask: List of arrays of booleans (one per component) that identify
+                     where the data is invalid.
+                     This can be obtained with the method :py:meth:`~.mask`.
+        :type mask: list of NumPy array
+
+        :param ignore_existing: If True, overwrite any previously existing mask.
+        :type ignore_existing: bool
+
+        """
+        self._apply_to_self(
+            self.mask_applied, mask, ignore_existing=ignore_existing
+        )
 
     def __eq__(self, other):
         """Check for equality."""
@@ -2174,6 +2407,8 @@ class HierarchicalGridData(BaseNumerical):
         :rtype:   1D NumPy array or float
 
         """
+        if not piecewise_constant and self.is_masked():
+            raise RuntimeError("Splines with masked data are not supported.")
 
         if isinstance(x, UniformGrid):
             # The way we want the coordinates is like as an array with the same
@@ -2343,7 +2578,7 @@ class HierarchicalGridData(BaseNumerical):
         # We need to invalidate the _component_mapping (it may have changed)
         self._component_mapping = None
 
-    def _apply_binary(self, other, function):
+    def _apply_binary(self, other, function, *args, **kwargs):
         """Apply a binary function to the data of ``self`` and ``other``.
 
         :param function: Function to apply to all the data in the various
@@ -2360,7 +2595,7 @@ class HierarchicalGridData(BaseNumerical):
             if self.shape != other.shape:
                 raise ValueError("Grid structure incompatible")
             new_data = [
-                function(data_self, data_other)
+                function(data_self, data_other, *args, **kwargs)
                 for data_self, data_other in zip(
                     self.all_components, other.all_components
                 )
@@ -2369,14 +2604,15 @@ class HierarchicalGridData(BaseNumerical):
 
         if isinstance(other, (int, float, complex)):
             new_data = [
-                function(data_self, other) for data_self in self.all_components
+                function(data_self, other, *args, **kwargs)
+                for data_self in self.all_components
             ]
             return type(self)(new_data)
 
         # If we are here, it is because we cannot add the two objects
         raise TypeError("I don't know how to combine these objects")
 
-    def _apply_reduction(self, reduction):
+    def _apply_reduction(self, reduction, *args, **kwargs):
         """Apply a reduction to the data.
 
         :param function: Reduction to apply to all the data in the various
@@ -2395,13 +2631,15 @@ class HierarchicalGridData(BaseNumerical):
             np.array(
                 [
                     # skipcq: PYL-W0212
-                    data._apply_reduction(reduction)
+                    data._apply_reduction(reduction, *args, **kwargs)
                     for data in self.all_components
                 ]
-            )
+            ),
+            *args,
+            **kwargs,
         )
 
-    def _apply_unary(self, function):
+    def _apply_unary(self, function, *args, **kwargs):
         """Apply a unary function to the data.
 
         :param function: Function to apply to all the data in the various
@@ -2413,7 +2651,13 @@ class HierarchicalGridData(BaseNumerical):
         :rtype: :py:class:`~.HierarchicalGridData`
 
         """
-        new_data = [function(data) for data in self.all_components]
+        # Here we are accessing _apply_unary, which is a protected member, so
+        # we ignore potential complaints.
+        new_data = [
+            # skipcq: PYL-W0212
+            data._apply_unary(function, *args, **kwargs)
+            for data in self.all_components
+        ]
         return type(self)(new_data)
 
     def _call_component_method(
@@ -2621,6 +2865,46 @@ class HierarchicalGridData(BaseNumerical):
         return self._call_component_method(
             "coordinates", method_returns_list=True
         )
+
+    def coordinates_at_maximum(self, absolute=True):
+        """Return the point with maximum value.
+
+        :returns:  Coordinate at where the value is maximum. If ``absolute``
+                   is True, then the absolute value is first taken.
+        :rtype:    1D NumPy array
+
+        """
+        comps = self.all_components
+
+        # We extract the maximum on each component, and find the maximum of the
+        # maxima
+        maxima = [
+            np.max(np.abs(comp.data) if absolute else np.max(comp.data))
+            for comp in comps
+        ]
+
+        comp_max = np.argmax(maxima)
+        return comps[comp_max].coordinates_at_maximum(absolute=absolute)
+
+    def coordinates_at_minimum(self, absolute=True):
+        """Return the point with minimum value.
+
+        :returns:  Coordinate at where the value is minimum. If ``absolute``
+                   is True, then the absolute value is first taken.
+        :rtype:    1D NumPy array
+
+        """
+        comps = self.all_components
+
+        # We extract the minimum on each component, and find the minimum of the
+        # minima
+        minima = [
+            np.min(np.abs(comp.data) if absolute else np.min(comp.data))
+            for comp in comps
+        ]
+
+        comp_min = np.argmin(minima)
+        return comps[comp_min].coordinates_at_minimum(absolute=absolute)
 
     def __str__(self):
         ret = "Available refinement levels (components):\n"

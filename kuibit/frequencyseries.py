@@ -2,8 +2,9 @@
 
 # Copyright (C) 2020-2021 Gabriele Bozzola
 #
-# Inspired by code originally developed by Wolfgang Kastaun. See, GitHub,
-# wokast/PyCactus/PostCactus/fourier_util.py
+# Inspired by code originally developed by Wolfgang Kastaun. This file may
+# contain algorithms and/or structures first implemented in
+# GitHub:wokast/PyCactus/PostCactus/fourier_util.py
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -385,6 +386,11 @@ class FrequencySeries(BaseSeries):
         :rtype: :py:class:`.TimeSeries`
 
         """
+        if self.is_masked():
+            raise RuntimeError(
+                "Fourier transform with masked data is not supported."
+            )
+
         # If fmin >= 0, then, the signal was probably real to begin with.
         # We will restore the negative frequencies so that the operation
         # is the actual inverse of taking the dft.

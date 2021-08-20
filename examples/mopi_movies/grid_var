@@ -19,6 +19,7 @@
 """
 
 from matplotlib.pyplot import clf as clear_figure
+
 from kuibit import argparse_helper as kah
 from kuibit.simdir import SimDir
 from kuibit.visualize_matplotlib import (
@@ -40,6 +41,7 @@ def mopi_add_custom_options(parser):
         action="store_true",
         help="Ignore symlinks in the data directory",
     )
+    parser.add_argument("--pickle-file", help="Read SimDir from this file.")
     kah.add_grid_to_parser(parser, dimensions=2)
     kah.add_figure_to_parser(parser)
     parser.add_argument(
@@ -98,7 +100,11 @@ class MOPIMovie:
 
         # TODO: Automatically compute min and max if they are not specified.
 
-        self.sim = SimDir(args.datadir, ignore_symlinks=args.ignore_symlinks)
+        self.sim = SimDir(
+            args.datadir,
+            ignore_symlinks=args.ignore_symlinks,
+            pickle_file=args.pickle_file,
+        )
         self.x0, self.x1, self.res = args.origin, args.corner, args.resolution
         self.shape = [self.res, self.res]
         self.reader = self.sim.gridfunctions[args.plane]
@@ -172,3 +178,5 @@ class MOPIMovie:
         add_text_to_corner(fr"$t = {time:.3f}$")
 
         save(path)
+
+        self.var.clear_cache()

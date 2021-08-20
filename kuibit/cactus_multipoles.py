@@ -2,8 +2,9 @@
 
 # Copyright (C) 2020-2021 Gabriele Bozzola
 #
-# Based on code originally developed by Wolfgang Kastaun. See, GitHub,
-# wokast/PyCactus/PostCactus/cactus_multipoles.py
+# Based on code originally developed by Wolfgang Kastaun. This file may contain
+# algorithms and/or structures first implemented in
+# GitHub:wokast/PyCactus/PostCactus/cactus_multipoles.py
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -42,7 +43,6 @@ up with a series of brackets or dots to access the actual data. For example, if
 
 import os
 import re
-from functools import lru_cache
 
 import h5py
 import numpy as np
@@ -427,15 +427,41 @@ class MultipolesDir:
         :param sd: Simulation directory.
         :type sd: :py:class:`~.SimDir`
         """
-        # self._vars is a dictionary. For _vars_ascii, the keys are the
-        # variables  and the items are sets of tuples of the form
-        # (multipole_l,  multipole_m, radius, filename) for text files.
+        # self._vars_*_files are dictionary. For _vars_ascii_files, the keys are
+        # the variables and the items are sets of tuples of the form
+        # (multipole_l, multipole_m, radius, filename) for text files.
         #
-        # For _vars_h5 they are sets (since we have to read the content
-        # to find the l and m)
-        self._vars_ascii = {}
-        self._vars_h5 = {}
-        self._vars_IL = {}
+
+        # For example:
+        # self._vars_ascii_files =
+        # {'psi4': {(2, 2, 110.69, 'output-0000/mp_Psi4_l_m2_r110.69.asc'),
+        #           (2, 2, 110.69, 'output-0001/mp_Psi4_l_m2_r110.69.asc')}}
+
+        self._vars_ascii_files = {}
+
+        # For _vars_h5_files, the keys are still the variables, but values are
+        # sets with only the files (and not tuples), since we have to read the
+        # content to find the l and m
+        #
+        # For example
+        # self._vars_h5_files =
+        # {'psi4': {'output-0000/mp_Psi4.h5', 'output-0001/mp_Psi4.h5'}}
+        self._vars_h5_files = {}
+
+        # For _vars_IL_files, I did things similarly to in the ascii case,
+        # because I didn't appreciate the fact that the h5 files were really
+        # closer to what I needed for the IL code files, since in both cases
+        # one must open the files in order to know what modes it contains.
+        # The only difference from the ascii case is that this time the whole
+        # set of multipoles contains the *same* file. I then overload the
+        # reading method to figure out which column of the file to pull from
+        # when reading. Hacky & inelegant, but hey, it works!
+        self._vars_IL_files = {}
+
+        # self._vars is the dictionary where we cache the results. The keys are
+        # the variables, the values are the corresponding MultipoleAllDets
+        # objects. We fill this with __getitem__
+        self._vars = {}
 
         # First, we need to find the multipole files.
         # There are text files and h5 files
@@ -477,7 +503,7 @@ class MultipolesDir:
             matched_IL = rx_IL.match(filename)
             if matched_h5 is not None:
                 variable_name = matched_h5.group(1).lower()
-                var_list = self._vars_h5.setdefault(variable_name, set())
+                var_list = self._vars_h5_files.setdefault(variable_name, set())
                 # We are flagging that this h5
                 var_list.add(f)
             elif matched_ascii is not None:
@@ -485,7 +511,9 @@ class MultipolesDir:
                 mult_l = int(matched_ascii.group(2))
                 mult_m = int(matched_ascii.group(3))
                 radius = float(matched_ascii.group(4))
-                var_list = self._vars_ascii.setdefault(variable_name, set())
+                var_list = self._vars_ascii_files.setdefault(
+                    variable_name, set()
+                )
                 var_list.add((mult_l, mult_m, radius, f))
             elif matched_IL is not None:
                 variable_name = "psi4" # all keys must be lower-case
@@ -661,26 +689,36 @@ class MultipolesDir:
 
         return MultipoleAllDets(mult_l)
 
-    @lru_cache(128)
     def __getitem__(self, key):
         """Read data associated to variable ``key``.
+
+        HDF5 files are preferred over ASCII ones.
 
         :returns: Multipolar data.
         :rtype: :py:class:`~.MultipoleAllDets`
 
         """
         k = str(key).lower()
-        # We prefer h5
-        if k in self._vars_h5:
-            return self._multipoles_from_h5files(self._vars_h5[k])
 
-        if k in self._vars_ascii:
-            return self._multipoles_from_textfiles(self._vars_ascii[k])
+        # If we don't have already cached the result, we first read it.
 
-        if k in self._vars_IL:
-            return self._multipoles_from_IL_Psi4_files(self._vars_IL[k])
-
-        raise KeyError
+        if k not in self._vars:
+            # We prefer h5
+            if k in self._vars_h5_files:
+                self._vars[k] = self._multipoles_from_h5files(
+                    self._vars_h5_files[k]
+                )
+            elif k in self._vars_ascii_files:
+                self._vars[k] = self._multipoles_from_textfiles(
+                    self._vars_ascii_files[k]
+                )
+            elif k in self._vars_IL_files: # But hey, IL code is still ok!
+                self._vars[k] = self._multipoles_from_IL_Psi4_files(
+                    self._vars_IL_files[k]
+                )
+            else:
+                raise KeyError
+        return self._vars[k]
 
     def get(self, key, default=None):
         """Return a the multipolar data for the given variable if available, else return
@@ -708,7 +746,7 @@ class MultipolesDir:
         """
         # We merge the dictionaries and return the keys.
         # This automatically takes care of making sure that they keys are unique.
-        return {**self._vars_h5, **self._vars_ascii, **self._vars_IL}.keys()
+        return {**self._vars_h5_files, **self._vars_ascii_files, **self._vars_IL_files}.keys()
 
     def __str__(self):
         """NOTE: __str__ requires opening all the h5 files! This can be slow!"""

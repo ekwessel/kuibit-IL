@@ -2,8 +2,9 @@
 
 # Copyright (C) 2020-2021 Gabriele Bozzola
 #
-# Inspired by code originally developed by Wolfgang Kastaun. See, GitHub,
-# wokast/PyCactus/PostCactus/cactus_multipoles.py
+# Inspired by code originally developed by Wolfgang Kastaun. This file may
+# contain algorithms and/or structures first implemented in
+# GitHub:wokast/PyCactus/PostCactus/cactus_multipoles.py
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -210,6 +211,9 @@ class GravitationalWavesOneDet(mp.MultipoleOneDet):
         general, a wise choise is to pick the longest physical period in the
         signal.
 
+        For more information on the fixed-frequency integration method, see
+        Reisswig 2011.
+
         Optionally, remove part of the output signal at both the beginning and
         the end. If ``trim_ends`` is True, ``pcut`` is removed. This is because
         those parts of the signal are typically not very accurate.
@@ -229,7 +233,7 @@ class GravitationalWavesOneDet(mp.MultipoleOneDet):
                           is equal to pcut.
         :type trim_ends: bool
 
-        :returns: :math:`r (h^+ - i rh^\times)`
+        :returns: :math:`r (h^+ - i h^\times)`
         :rtype: :py:class:`~.TimeSeries`
 
         """
@@ -305,7 +309,7 @@ class GravitationalWavesOneDet(mp.MultipoleOneDet):
         :param l_max: Ignore multipoles with ``l > l_max``
         :type l_max: int
 
-        :returns: :math:`r (h^+ - i rh^\times)`
+        :returns: :math:`r (h^+ - i h^\times)`
         :rtype: :py:class:`~.TimeSeries`
         """
 
@@ -389,7 +393,7 @@ class GravitationalWavesOneDet(mp.MultipoleOneDet):
         :param l_max: Ignore multipoles with l > l_max
         :type l_max: int
 
-        :returns: :math:`r (h^+ - i rh^\times)`
+        :returns: :math:`r (h^+ - i h^\times)`
         :rtype: Detectors of :py:class:`~.TimeSeries`
 
         """
@@ -605,7 +609,7 @@ class GravitationalWavesOneDet(mp.MultipoleOneDet):
         r"""Return the instantaneous linear momentum along the z direction
         lost in the mode (l, m).
 
-        This is computed with Eq. (3.15) in Ruiz 2008.
+        This is computed with Eq. (3.15) in Ruiz 2008 (0707.4654).
 
         :param mult_l: l multipole moment.
         :type mult_t: int

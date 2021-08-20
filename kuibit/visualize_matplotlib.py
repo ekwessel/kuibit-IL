@@ -2,8 +2,9 @@
 
 # Copyright (C) 2020-2021 Gabriele Bozzola
 #
-# Inspired by code originally developed by Wolfgang Kastaun. See, GitHub,
-# wokast/PyCactus/PostCactus/visualize.py
+# Inspired by code originally developed by Wolfgang Kastaun. This file may
+# contain algorithms and/or structures first implemented in
+# GitHub:wokast/PyCactus/PostCactus/visualize.py
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -225,6 +226,11 @@ def preprocess_plot_grid(func):
             resample = default_or_kwargs("resample", False)
 
             # Overwrite data with UniformGridData
+            if data.is_masked():
+                warnings.warn(
+                    "Mask information will be lost with the resampling"
+                )
+
             data = data.to_UniformGridData(
                 shape=kwargs["shape"], x0=x0, x1=x1, resample=resample
             )
@@ -254,6 +260,12 @@ def preprocess_plot_grid(func):
             if resampling:
                 resample = default_or_kwargs("resample", False)
                 new_grid = gd.UniformGrid(shape=kwargs["shape"], x0=x0, x1=x1)
+
+                if data.is_masked():
+                    warnings.warn(
+                        "Mask information will be lost with the resampling"
+                    )
+
                 data = data.resampled(
                     new_grid, piecewise_constant=(not resample)
                 )
@@ -369,6 +381,7 @@ def save(
     outputpath,
     figure=None,
     axis=None,
+    tikz_clean_figure=False,
     **kwargs,
 ):
     """Save figure to the given location.
@@ -377,7 +390,9 @@ def save(
     ``tikzplotlib``.
 
     Unknown arguments are passed to the ``matplotlib.savefig`` or
-    ``tikzplotlib.save`` (depending on the extension).
+    ``tikzplotlib.save`` (depending on the extension). In this second case, if
+    ``tikz_clean_figure = True``, unknown arguments are first passed to
+    ``tikzplotlib.clean_figure``.
 
     :param outputpath:  Output path with or without extension. If the
                         extension is ``.tikz``, the file is saved with
@@ -387,15 +402,47 @@ def save(
                    use the current figure.
     :type figure: ``matplotlib.pyplot.figure``
 
+    :param tikz_clean_figure: If ``tikzplotlib`` is begin used, reduce the size
+                              of the output ``tikz`` file. When this is set to
+                              True, unknown arguments are first passed to
+                              ``tikzplotlib.clean_figure``, then to
+                              ``tikzplotlib.save``. ``tikzplotlib.clean_figure``
+                              will change the given figure.
+    :type tikz_clean_figure: bool
+
     :param axis: If passed, plot on this axis. If not passed (or if None), use
                  the current axis.
     :type axis: ``matplotlib.pyplot.axis``
 
     """
     if os.path.splitext(outputpath)[-1] == ".tikz":
+
+        # If clean_figure is True, we extract from kwargs those argument
+        # that tikzplotlib.clean_figure would take. For this, we need to
+        # know what argument that function takes.
+        #
+        # Form https://stackoverflow.com/a/40363565
+        if tikz_clean_figure:
+            args_names = tikzplotlib.clean_figure.__code__.co_varnames[
+                : tikzplotlib.clean_figure.__code__.co_argcount
+            ]
+
+            kwargs_clean_figure = {}
+
+            # We split kwargs in those that are supposed to be passed to
+            # clean_figure and those that have to be passed to save. For this,
+            # we iterate over the arguments taken by clean_figure, if they are
+            # in kwargs, then we move them to a new dictionary
+            for arg in args_names:
+                if arg in kwargs:
+                    kwargs_clean_figure.update({arg: kwargs[arg]})
+                    del kwargs[arg]
+
+            tikzplotlib.clean_figure(fig=figure, **kwargs_clean_figure)
+
         tikzplotlib.save(outputpath, **kwargs)
     else:
-        plt.savefig(outputpath, **kwargs)
+        figure.savefig(outputpath, **kwargs)
 
 
 @preprocess_plot
@@ -405,6 +452,7 @@ def save_from_dir_filename_ext(
     file_ext,
     figure=None,
     axis=None,
+    tikz_clean_figure=False,
     **kwargs,
 ):
     """Save figure to a location defined by a folder, a name, and an extension.
@@ -436,18 +484,14 @@ def save_from_dir_filename_ext(
         outputpath,
         figure=figure,
         axis=axis,
+        tikz_clean_figure=tikz_clean_figure,
         **kwargs,
     )
 
 
 @preprocess_plot
 def set_axis_limits(
-    xmin=None,
-    xmax=None,
-    ymin=None,
-    ymax=None,
-    figure=None,
-    axis=None
+    xmin=None, xmax=None, ymin=None, ymax=None, figure=None, axis=None
 ):
     """Set limits on the two axes of axis.
 
@@ -473,11 +517,7 @@ def set_axis_limits(
 
 
 @preprocess_plot
-def set_axis_limits_from_args(
-        args,
-        figure=None,
-        axis=None
-):
+def set_axis_limits_from_args(args, figure=None, axis=None):
     """Set limits on the two axes of axis with data read from ``args``.
 
     It uses the ``xmin``, ``xmax``, ``ymin``, ``ymax`` attributes.
@@ -500,7 +540,7 @@ def set_axis_limits_from_args(
         ymin=args.ymin,
         ymax=args.ymax,
         figure=figure,
-        axis=axis
+        axis=axis,
     )
 
 
@@ -643,6 +683,7 @@ def _plot_grid(
 
     if colorbar:
         plot_colorbar(image, figure=figure, axis=axis, label=label)
+
     return image
 
 
@@ -881,6 +922,11 @@ def plot_colorbar(
     cb = plt.colorbar(mpl_artist, cax=cax, **kwargs)
     if label is not None:
         cb.set_label(label)
+
+    # When we draw a colorbar, that changes the selected axis. We do not
+    # want that, so we select back the original one.
+    plt.sca(axis)
+
     return cb
 
 
