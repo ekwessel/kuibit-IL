@@ -517,7 +517,7 @@ class MultipolesDir:
                 var_list.add((mult_l, mult_m, radius, f))
             elif matched_IL is not None:
                 variable_name = "psi4" # all keys must be lower-case
-                var_list = self._vars_IL.setdefault(variable_name, set())
+                var_list = self._vars_IL_files.setdefault(variable_name, set())
                 data = np.genfromtxt(f) # Unfortunately there's no way to check this without opening the file
                 radius = data[0, -4]
                 if (data.shape[1] - 5)%2 != 0:
