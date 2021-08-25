@@ -578,7 +578,7 @@ class AllScalars:
                             # We add to the _vars dictionary the mapping:
                             # [var][folder] to OneScalar(f)
                             folder = cactusascii_file.folder
-                            self._vars.setdefault(var, {})[
+                            self._vars_readers.setdefault(var, {})[
                                 folder
                             ] = cactusascii_file
                 except RuntimeError:
