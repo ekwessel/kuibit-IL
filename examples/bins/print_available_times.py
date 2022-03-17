@@ -52,10 +52,10 @@ if __name__ == "__main__":
                 raise RuntimeError(
                     f"Variable {args.variable} of dimension {args.dimension} not available"
                 )
-            for it in reader[args.dimension][
+            for time in reader[args.dimension][
                 args.variable
             ].available_iterations:
-                print(it, end=" ")
+                print(time, end=" ")
             print()
         else:
             # First we check that we have the variable
