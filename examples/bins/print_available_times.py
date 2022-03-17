@@ -54,7 +54,7 @@ if __name__ == "__main__":
                 )
             for time in reader[args.dimension][
                 args.variable
-            ].available_iterations:
+            ].available_times:
                 print(time, end=" ")
             print()
         else:
