@@ -670,7 +670,7 @@ class BaseSeries(BaseNumerical):
         """
         if self.is_masked():
             mask = np.invert(self.mask)
-            return type(self)(self.x[mask], self.y[mask], True)
+            return type(self)(np.ma.compressed(self.x[mask]), np.ma.compressed(self.y[mask]), True)
 
         # We can copy the spline
         return self.copy()
